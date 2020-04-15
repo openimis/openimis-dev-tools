@@ -9,12 +9,6 @@ $db_name="database-name"
 $db_user="database-user"
 $db_password="database-password"
 
-$db_host="TPH-L18042"
-$db_port="1433"
-$db_name="test-demo-140"
-$db_user="test1"
-$db_password="+Q2w3e4r5+Q2w3e4r5"
-
 $DJANGO_SUPERUSER_USERNAME="spiderman"
 $DJANGO_SUPERUSER_PASSWORD="spiderman"
 $DJANGO_SUPERUSER_EMAIL="spiderman@openimis.org"
@@ -270,6 +264,11 @@ function init-be-environment() {
     
     Write-Host "Creating Django superuser..."
     create-django-superuser $DJANGO_SUPERUSER_USERNAME $DJANGO_SUPERUSER_EMAIL $DJANGO_SUPERUSER_PASSWORD
+
+    $env:NO_DATABASE=1 
+    python manage.py compilemessages
+    python manage.py collectstatic --clear --noinput
+    $env:NO_DATABASE=0
 
     Write-Host "To start the BE just execute:"
     Write-Host "    run-be"
