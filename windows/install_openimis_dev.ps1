@@ -28,7 +28,10 @@ $be_assembly = "openimis-be_py"
 $fe_assembly = "openimis-fe_js"
 $git_branch = "develop"
 
+$gettext_output = "$project_dir\tools\gettext"
+
 $python_version = "3.8.2"
+$gettext_version = "0.19.8.1"
 
 $save_dir=Resolve-Path ~/Downloads
 
@@ -56,6 +59,13 @@ function download-file([string]$url, [string]$d) {
 	}
 }
 
+function test-save-dir {
+    if(!(Test-Path -pathType container $save_dir)) {
+		write-host -fore red $save_dir " does not exist";
+		exit;
+	}
+}
+
 function get-python-ver([Parameter(mandatory=$false)] [String]$version) {
 	# Download Python indicated by version. For example:
 	#  > get-python-ver 3.4.0rc1
@@ -68,10 +78,7 @@ function get-python-ver([Parameter(mandatory=$false)] [String]$version) {
 	}
     $filename = 'python-' + $version + '.amd64.msi';
 	$save_path = '' + $save_dir + '\' + $filename;
-	if(!(Test-Path -pathType container $save_dir)) {
-		write-host -fore red $save_dir " does not exist";
-		exit;
-	}
+    test-save-dir
 
 	$url = 'http://www.python.org/ftp/python/' + $version.Substring(0,5) + '/amd64/exe.msi'; # + $filename;
 	download-file $url $save_path
@@ -93,10 +100,17 @@ function get-setuptools {
 
 function get-pip {
 	write-host "Installing pip"
-	$setuptools_url = "https://raw.github.com/pypa/pip/master/contrib/get-pip.py"
-	$get_pip = '' + $save_dir + "\get_pip.py"
-	download_file $setuptools_url $get_pip
-	python $get_pip
+
+    if ((Get-Command "pip.exe" -ErrorAction SilentlyContinue)  -eq $null) { 
+        $setuptools_url = "https://raw.github.com/pypa/pip/master/contrib/get-pip.py"
+	    $get_pip = '' + $save_dir + "\get_pip.py"
+	    download_file $setuptools_url $get_pip
+	    python $get_pip
+    }
+    else {
+        write-host "pip already installed. upgrading..."
+        python -m pip install --upgrade pip
+    }
 }
 
 function create-venv {
@@ -115,6 +129,22 @@ function get-git {
 	download_file $url $dest
 	Start-Process $dest -ArgumentList "/silent" -Wait
 	[Environment]::SetEnvironmentVariable("Path", "$env:Path;C:\Program Files (x86)\Git\bin\", "User")
+}
+
+function get-chocolately {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;
+    Invoke-WebRequest -Uri "https://chocolatey.org/install.ps1" -UseBasicParsing | iex
+}
+
+function get-gettext {
+    $gettext_url="https://github.com/vslavik/gettext-tools-windows/releases/download/v$GETTEXT_VERSION/gettext-tools-windows-$GETTEXT_VERSION.zip"
+    $gettext_file = "$save_dir\gettext.zip"
+    
+    test-save-dir
+    Invoke-WebRequest -Uri $gettext_url -OutFile $gettext_file
+    Expand-Archive -Path $gettext_file -DestinationPath $gettext_output -Force
+    # TODO add validation if folder not in Path
+    [Environment]::SetEnvironmentVariable("Path", "$env:Path;$gettext_output\bin\", "Machine")
 }
 
 function create-be-dirs {
@@ -205,21 +235,15 @@ function create-django-superuser ($username, $email, $password) {
 
 # to remove
 function init-python-environment() {
-    if ((Get-Command "pip.exe" -ErrorAction SilentlyContinue)  -eq $null) { 
-        get-pip 
-    }
-    else {
-        write-host "pip already installed. upgrading..."
-        python -m pip install --upgrade pip
-    }
-    create-directories
+    get-pip
+    #create-directories
     get-virtualenv 
 }
 
 function init-be-environment() {
     Write-Host "Initializing the BE modules..."
 
-    python -m pip install --upgrade pip
+    get-pip
     create-be-dirs
     create-venv 
 
@@ -265,6 +289,9 @@ function init-be-environment() {
     Write-Host "Creating Django superuser..."
     create-django-superuser $DJANGO_SUPERUSER_USERNAME $DJANGO_SUPERUSER_EMAIL $DJANGO_SUPERUSER_PASSWORD
 
+    Write-Host "Preparing the code..."
+    get-gettext
+   	$env:Path="$env:Path;$gettext_output\bin\"
     $env:NO_DATABASE=1 
     python manage.py compilemessages
     python manage.py collectstatic --clear --noinput
@@ -279,5 +306,5 @@ function run-be {
     activate-venv
 
     Set-Location -Path "$be_dir\$be_assembly\openIMIS"
-    python manage.py runserver 
+    python manage.py runserver --noreload
 }
