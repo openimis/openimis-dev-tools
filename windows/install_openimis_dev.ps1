@@ -201,13 +201,14 @@ function activate-venv() {
 
 function get-openimis-repo([String]$name, [String]$dest) {
     $current_dir = $PWD
+    $dest = "$dest\$name"
     # Set-Location -Path $dest
-    if (!(Test-Path -Path .\$name\*)) { 
-        git clone https://github.com/openimis/$name.git -b $git_branch "$dest\$name"
+    if (!(Test-Path -Path $dest\*)) { 
+        git clone https://github.com/openimis/$name.git -b $git_branch $dest
     }
     else {
  	    write-host "Repository $name exists. Pulling last $git_branch branch..."     
-        Set-Location -Path "$dest\$name"
+        Set-Location -Path $dest
         git fetch
         git checkout $git_branch  
         git pull 
@@ -308,3 +309,5 @@ function run-be {
     Set-Location -Path "$be_dir\$be_assembly\openIMIS"
     python manage.py runserver --noreload
 }
+
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
