@@ -86,11 +86,11 @@ def create_release(repo,from_branch,to_branch):
         if len(latest_release_tag)>5:
             latest_release_tag =latest_release_tag[:5]
         if nb_commit > 5:
-            v = semantic_version.Version(latest_release_tag).next_minor()
-            print("module {} new minor latest version created: {}".format(repo.name, str(v)))
+            v = "v"+semantic_version.Version(latest_release_tag).next_minor()
+            print("new minor: module {} version {}".format(repo.name, str(v)))
         elif nb_commit > 0:
-            v = semantic_version.Version(latest_release_tag).next_patch()                
-            print("module {} new patch latest version created: {}".format(repo.name, str(v)))
+            v = "v"+semantic_version.Version(latest_release_tag).next_patch()                
+            print("new patch: module {} created {}".format(repo.name, str(v)))
     else:
         v = '1.0.0'
 
@@ -103,13 +103,9 @@ def create_release(repo,from_branch,to_branch):
         return({ 'version': str(v) })
         sleep(2)
     else:
-        print("module {} already at his latest version: {}".format(repo.name, latest_release_tag))
+        print("no changes: module {} version: {}".format(repo.name, latest_release_tag))
         return({'version': latest_release_tag })
 
 
-    
-
-                
-    
 if __name__ == '__main__':
     main()
