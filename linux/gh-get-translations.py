@@ -22,6 +22,7 @@ def main():
         if module_name is not None:
             repo = g.get_repo(module_name)
             content = None
+            module_nickname = module_name.replace('openimis-','').replace('_js','')
             file_list = repo.get_contents("src", ref = 'develop' )
 
             if any([x.name == 'translations' for x in file_list]):
@@ -32,13 +33,13 @@ def main():
                 elif any([x.name == 'ref.json' for x in file_list]):
                     content = repo.get_contents("src/translations/ref.json", ref = 'develop' )
             if content is not None:
-                print(module_name)  
+                print(module_nickname)  
                 trad = json.loads(content.decoded_content)
-                f = open(f"./{module_name}.en.json", "w")
+                f = open(f"./{module_nickname}-en.json", "w")
                 f.write(json.dumps(trad, indent=4))
                 f.close()
             else:
-                print(f"{module_name}: No trad Found")  
+                print(f"{module_nickname}: No trad Found")  
    	
 def parse_pip(pip_str):
     if "https://github.com" in pip_str:
