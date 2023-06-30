@@ -1,6 +1,6 @@
 import re
 from time import sleep
-from config import GITHUB_TOKEN, RELEASE_NAME, REPOS
+from config import GITHUB_TOKEN, RELEASE_NAME, REPOS,TIMER
 from github import Github
 import json
 
@@ -64,7 +64,7 @@ def create_pr(repo,from_branch,to_branch):
         diff = repo.compare(head=from_branch, base=to_branch)
         if len(diff.commits) > 0:
             print("PR created between  {} and  {}  for repo {}".format(from_branch,to_branch, repo.name))
-            sleep(2)
+            sleep(TIMER)
             pr = repo.create_pull(title="MERGING RELEASE branches", body=body, head=from_branch, base=to_branch)
             return pr.number
         else:
