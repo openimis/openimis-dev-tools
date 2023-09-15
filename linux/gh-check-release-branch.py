@@ -36,8 +36,7 @@ def main():
         branches = [x.name for x in list(repo.get_branches())]
         # check if release exists
         if release_name in branches:
-            pr_id = create_pr(repo,release_name,'main')
-            pr_id = create_pr(repo,release_name,'develop')
+            print(" {} branch existing {}".format(repo.name,release_name))
         #elif 'develop' in branches:
          #   pr_id = create_pr(repo,'develop','main')
  
@@ -54,32 +53,7 @@ def parse_npm(npm_str):
     return "openimis/openimis-" + match.group(1) + "_js"
 
                 
-def create_pr(repo,from_branch,to_branch):
-    pulls = repo.get_pulls(state='open', sort='created', head='openimis:'+from_branch, base=to_branch)
-    not_merged = True
-    
-    for pull in pulls.__iter__():
-        if not pull.merged: 
-            not_merged = False
-            #break
 
-    if not_merged:
-        body = '''
-            MERGING RELEASE branches
-            Release {}
-        '''.format(RELEASE_NAME)
-        diff = repo.compare(head='openimis:'+from_branch, base=to_branch)
-        if len(diff.commits) > 0:
-            print("PR created between  {} and  {}  for repo {}".format(from_branch,to_branch, repo.name))
-            sleep(TIMER)
-            pr = repo.create_pull(title="MERGING RELEASE branches", body=body, head=from_branch, base=to_branch)
-            return pr.number
-        else:
-            print("no commit between  {} and  {}  for repo {}".format(from_branch,to_branch, repo.name))
-    else:
-            print(" {} Pr already existing between  {} and  {}  for repo {}".format(len(list(pulls)),from_branch,to_branch, repo.name))
-
-        
     
 if __name__ == '__main__':
     main()
