@@ -2,6 +2,52 @@
 
 This repository group tools for developers to initialize and develop the openIMIS system. 
 
+
+## Python tools
+
+### config file
+```
+#person tocken
+GITHUB_TOKEN=
+#deprecated: list of module to take care of; now all module from openimis.json in the develop assembly are in
+REPOS =  []
+#name of the branche to create/chec ... 
+RELEASE_NAME='release/23.04'
+#to avoid too many request (Github block if not)
+TIMER=5
+```
+
+
+
+### gh-check-release-branch
+
+ check if there is an existing branch
+
+ ### gh-create-release-branch
+
+ create the release bracn from develop
+
+### gh-get-translations
+
+get FE translation
+
+### gh-make-release
+
+create github, pip and npm release packages
+
+
+### gh-pr-develop-to-release
+
+create PR to merge dev to release
+
+### gh-pr-release-to-main
+
+create PR to merge release to main
+
+### make-links
+
+create docs
+
 ## Initializing modular openIMIS
 
 First you need to install or access the legacy openIMIS (at least the DB for the BE).
