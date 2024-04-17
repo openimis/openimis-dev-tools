@@ -22,7 +22,7 @@ def main():
         if module_name is not None:
             repo = g.get_repo(module_name)
             config = create_release(repo,from_branch)
-            package_conf = json.loads(repo.get_contents("package.json", ref ='main' ).decoded_content)
+            package_conf = json.loads(repo.get_contents("package.json", ref ='develop' ).decoded_content)
             config['name'] = package_conf['name']
             if config['name'] == '@openimis/fe':
                 config['nickname']= "CoreModule"
@@ -93,7 +93,7 @@ def create_release(repo,from_branch):
             latest_release_tag =latest_release_tag[1:]
         if len(latest_release_tag)>5:
             latest_release_tag =latest_release_tag[:5]
-        if nb_commit > 100:
+        if nb_commit > 10:
             v = "v"+str(semantic_version.Version(latest_release_tag).next_minor())
             print("new minor: module {} version {}".format(repo.name, str(v)))
         elif nb_commit > 0:

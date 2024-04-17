@@ -89,11 +89,11 @@ def create_release_branch(repo,target_branch,source_branch):
     branches =repo.get_branches()
     if any(x for x in branches if x.name == target_branch):
         print("branch %s  already exist on repo %s" % (target_branch ,repo.name) )
-        return None
+        return {'name': repo.name }
     else:
         print("create branch %s  from %s for repo %s" % (target_branch,source_branch ,repo.name) )
         repo.create_git_ref(ref='refs/heads/' + target_branch, sha=sb.commit.sha)
-        return {}
+        return {'name': repo.name }
 
 
 

@@ -2,6 +2,7 @@ import re
 from time import sleep
 from config import GITHUB_TOKEN, RELEASE_NAME, REPOS
 from github import Github # pip install pyGithub
+from utils import flatten_json
 import json
 
 
@@ -33,10 +34,10 @@ def main():
                 elif any([x.name == 'ref.json' for x in file_list]):
                     content = repo.get_contents("src/translations/ref.json", ref = 'develop' )
             if content is not None:
-                print(module_nickname)  
+                print(module_nickname) 
                 trad = json.loads(content.decoded_content)
-                f = open(f"./{module_nickname}-en.json", "w")
-                f.write(json.dumps(trad, indent=4))
+                f = open(f"./{module_nickname.replace('/','-')}-en.json", "w+")
+                f.write(json.dumps(flatten_json(trad), indent=4))
                 f.close()
             else:
                 print(f"{module_nickname}: No trad Found")  
