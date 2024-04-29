@@ -27,7 +27,7 @@ def main():
             if config['name'] == '@openimis/fe':
                 config['nickname']= "CoreModule"
             else:
-                package_conf = repo.get_contents("src/index.js", ref ='main' ).decoded_content.decode('utf-8')
+                package_conf = repo.get_contents("src/index.js", ref ='develop' ).decoded_content.decode('utf-8')
                 config['nickname']=re.search(r'export +const +(\w+)Module += +\(cfg\) +=>',package_conf ).group(1)
                 if config['nickname'] is None:
                     config['nickname'] = re.search(r'fe-(.+)$',package_conf['name'] ).group(1).capitalize()+"Module"

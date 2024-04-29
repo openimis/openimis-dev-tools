@@ -94,10 +94,14 @@ def flatten_json(y):
     return out  
             
 def for_repos(repos_name,from_branch, to_branch, callback):
+    output = []
     g =Github(GITHUB_TOKEN)
     for repo_name in repos_name:
         repo = g.get_repo(repo_name)
         branches = [x.name for x in list(repo.get_branches())]
         # check if release exists
         
-        callback(repo,branches, from_branch, to_branch)
+        res = callback(repo,branches, from_branch, to_branch)
+        if res:
+            output.append(res)
+    return output
