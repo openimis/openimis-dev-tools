@@ -2,7 +2,7 @@ import urllib.request
 import re
 from time import sleep
 from config import GITHUB_TOKEN, TIMER
-from github import Github
+from github import Github, PaginatedList
 import json
 
 def create_pr(repo,from_branch,to_branch):
@@ -18,7 +18,9 @@ def create_pr(repo,from_branch,to_branch):
         title = f"MERGING {from_branch} into {to_branch}"
 
         diff = repo.compare(head=from_branch, base=to_branch)
-        if len(diff.commits) > 0:
+        nb_commit = diff.commits.totalCount if isinstance(diff.commits, PaginatedList.PaginatedList) else len(diff.commits)
+        
+        if  nb_commit:
             page = urllib.request.urlopen(diff.diff_url)
             diff_str = page.read()
             if '@@' in  str(diff_str):

@@ -2,7 +2,7 @@ from config import  RELEASE_NAME
 from github import Github
 from utils import create_pr, parse_npm, parse_pip, create_pr_repo, for_repos, get_repos_name
 
-
+MASK =  'openimis-be-calcrule_validations_py'
 def main():
     release_name = RELEASE_NAME
     repos_name = get_repos_name(ref_branch=RELEASE_NAME)
@@ -10,9 +10,19 @@ def main():
         
         # check if release exists
 def callback(repo,branches,release_name, to_branch):
+    
+    if MASK and  MASK not in repo.name:
+        print(f" skip {repo.name}")
+        return 
     print(repo.name)
     tag = repo.get_latest_release().tag_name
-    dispatch_inputs = {"logLevel": "Warning", "message": "Log Message"}
+
+    dispatch_inputs = {
+        "logLevel": "Warning", 
+        "message": "Log Message", 
+        "event_type":"release",
+        "created": True
+        }
     if 'openimis-be' in repo.name:
         # Create the dispatch event
         event_name = 'python-publish.yml'

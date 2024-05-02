@@ -6,7 +6,7 @@ import semantic_version # pip install semantic-version
 
 def main():
     release_name = RELEASE_NAME
-    repos_name = get_repos_name(ref_branch=RELEASE_NAME)
+    repos_name = get_repos_name(ref_branch='develop')
     config = for_repos(repos_name,release_name, '', callback)
     print_fe_config(list(filter(lambda c: c['scope'] == 'fe', config)))
     print_be_config(list(filter(lambda c: c['scope'] == 'be', config)))
