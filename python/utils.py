@@ -110,8 +110,8 @@ def for_repos(repos_name,from_branch, to_branch, callback):
 
 def get_config(repo, branches, source_branch, target_branch):
     config = {}
-    config['url'] = repo.git_url
-    
+    config['git'] = repo.git_url
+    config['url'] = repo.html_url
     try:
         config['version'] = repo.get_latest_release().tag_name
     except:
@@ -119,12 +119,12 @@ def get_config(repo, branches, source_branch, target_branch):
     config ['clean_version'] = config['version'][1:] if config['version'].startswith('v') else config['version']
     if 'openimis-fe-' in repo.name :
         config['scope'] = 'fe'
-        package_conf = json.loads(repo.get_contents("package.json", ref = target_branch ).decoded_content)
+        package_conf = json.loads(repo.get_contents("package.json", ref = source_branch ).decoded_content)
         config['name'] = package_conf['name']
         if config['name'] == '@openimis/fe':
             config['nickname']= "CoreModule"
         else:
-            package_conf = repo.get_contents("src/index.js", ref = target_branch).decoded_content.decode('utf-8')
+            package_conf = repo.get_contents("src/index.js", ref = source_branch).decoded_content.decode('utf-8')
             config['nickname']=re.search(r'export +const +(\w+)Module += +\(cfg\) +=>',package_conf ).group(1)
             if config['nickname'] is None:
                 config['nickname'] = re.search(r'fe-(.+)$',package_conf['name'] ).group(1).capitalize()+"Module"
@@ -132,7 +132,7 @@ def get_config(repo, branches, source_branch, target_branch):
                 config['nickname'] = config['nickname']+"Module"
     else:
         config['scope'] = 'be'
-        package_conf = repo.get_contents("setup.py", ref = target_branch ).decoded_content.decode('utf-8')
+        package_conf = repo.get_contents("setup.py", ref = source_branch ).decoded_content.decode('utf-8')
         config['name']=re.search(r'name *= *[\'|""](.+)[\'|"]',package_conf ).group(1)
         config['nickname'] =re.search(r'openimis-be-(.+)$',config['name'] ).group(1).replace('-','_')
     return config
