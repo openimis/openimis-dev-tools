@@ -7,7 +7,7 @@ import semantic_version  # pip install semantic-version
 
 def main():
     release_name = RELEASE_NAME
-    repos_name = get_repos_name(ref_branch='develop')
+    repos_name = get_repos_name(ref_branch=RELEASE_NAME)
     config = for_repos(repos_name,release_name, release_name, get_config)
     print_fe_config(list(filter(lambda c: c['scope'] == 'fe', config)))
     print_be_config(list(filter(lambda c: c['scope'] == 'be', config)))
@@ -17,10 +17,10 @@ def main():
 
 def print_be_config(modules):
     print("========================= references Be =================================")
-    print(f'=HYPERLINK("https://github.com/openimis/openimis-be_py","Backend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-be_py/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |')
+    print(f'|=HYPERLINK("https://github.com/openimis/openimis-be_py","Backend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-be_py/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |')
 
     for module in modules:
-        print(f'=HYPERLINK("{module["url"]}","BE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.pypi.org/project/{module["name"].replace("@openimis/", "").lower()}/{module["clean_version"]}","{module["name"]}")|')
+        print(f'|=HYPERLINK("{module["url"]}","BE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.pypi.org/project/{module["name"].replace("@openimis/", "").lower()}/{module["clean_version"]}","{module["name"]}")|')
     print("========================= config git ===================================")
     for module in modules:
         print(f"""            {{
@@ -39,10 +39,10 @@ def print_be_config(modules):
 
 def print_fe_config(modules):
     print("========================= references FE =================================")
-    print(f'=HYPERLINK("https://github.com/openimis/openimis-fe_js","Frontend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-fe_js/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |')
+    print(f'|=HYPERLINK("https://github.com/openimis/openimis-fe_js","Frontend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-fe_js/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |')
 
     for module in modules:
-        print(f'=HYPERLINK("{module["url"]}","FE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.npmjs.com/package/@openimis/{module["name"].replace("@openimis/", "").lower()}/v/{module["clean_version"]}","npm:{module["name"]}")|')
+        print(f'|=HYPERLINK("{module["url"]}","FE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.npmjs.com/package/@openimis/{module["name"].replace("@openimis/", "").lower()}/v/{module["clean_version"]}","npm:{module["name"]}")|')
 
     print("========================= config git ===================================")
 

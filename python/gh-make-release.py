@@ -8,9 +8,9 @@ import json
 import semantic_version # pip install semantic-version
 
 def main():
-    from_branch = 'develop'
+    from_branch = RELEASE_NAME
     to_branch = RELEASE_NAME
-    repos_name = get_repos_name()
+    repos_name = get_repos_name(ref_branch=RELEASE_NAME)
     for_repos(repos_name, from_branch, to_branch, create_release) 
     
 def create_release(repo,branches, from_branch, to_branch):
@@ -27,7 +27,7 @@ def create_release(repo,branches, from_branch, to_branch):
             latest_release_tag =latest_release_tag[1:]
         if len(latest_release_tag)>5:
             latest_release_tag =latest_release_tag[:5]
-        if nb_commit > 10:
+        if nb_commit > 2:
             v = "v"+str(semantic_version.Version(latest_release_tag).next_minor())
             print("new minor: module {} version {}".format(repo.name, str(v)))
         elif nb_commit > 0:

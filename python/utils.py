@@ -7,6 +7,8 @@ import json
 
 def create_pr(repo,from_branch,to_branch):
     pulls = repo.get_pulls(state='open', sort='created', head='openimis:'+from_branch, base=to_branch)
+    if not list(pulls):
+        pulls = repo.get_pulls(state='open', sort='created', head=from_branch, base=to_branch)
     not_merged = True
     
     for pull in pulls.__iter__():
@@ -38,10 +40,14 @@ def create_pr(repo,from_branch,to_branch):
 
 def parse_pip(pip_str):
     if "https://github.com" in pip_str:
-        match =  re.search(r'github.com/(.+).git',pip_str )
-        return match.group(1)
+        match =  re.search(r'github.com/([\w\-_]+).git',pip_str )
+        if match:
+            return match.group(1)
     else:
-        print("Error name not found")
+        match = re.search(r'openimis-be-([\w\-_]+)[=<>]',pip_str )
+        if match:
+            return 'openimis/openimis-be-' + match.group(1).replace('-','_')+ '_py'
+    print("Error name not found")
     
 def parse_npm(npm_str):
 
@@ -124,12 +130,11 @@ def get_config(repo, branches, source_branch, target_branch):
         if config['name'] == '@openimis/fe':
             config['nickname']= "CoreModule"
         else:
-            package_conf = repo.get_contents("src/index.js", ref = source_branch).decoded_content.decode('utf-8')
-            config['nickname']=re.search(r'export +const +(\w+)Module += +\(cfg\) +=>',package_conf ).group(1)
+            index = repo.get_contents("src/index.js", ref = source_branch).decoded_content.decode('utf-8')
+            config['nickname']=re.search(r'export +const +(\w+Module) += +\(cfg\) +=>',index ).group(1)
             if config['nickname'] is None:
                 config['nickname'] = re.search(r'fe-(.+)$',package_conf['name'] ).group(1).capitalize()+"Module"
-            else:
-                config['nickname'] = config['nickname']+"Module"
+
     else:
         config['scope'] = 'be'
         package_conf = repo.get_contents("setup.py", ref = source_branch ).decoded_content.decode('utf-8')
