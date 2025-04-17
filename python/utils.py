@@ -1,20 +1,23 @@
 import urllib.request
 import re
 from time import sleep
-from config import GITHUB_TOKEN, TIMER
+from config import GITHUB_TOKEN, TIMER,  RELEASE_NAME
+
 from github import Github, PaginatedList
 import json
 
 def create_pr(repo,from_branch,to_branch):
-    pulls = repo.get_pulls(state='open', sort='created', head='openimis:'+from_branch, base=to_branch)
-    if not list(pulls):
-        pulls = repo.get_pulls(state='open', sort='created', head=from_branch, base=to_branch)
+    #pulls = repo.get_pulls(state='open', sort='created', head='openimis:'+from_branch, base=to_branch)
+    #if not list(pulls):
+    all_pulls = repo.get_pulls(state='open', sort='created', head=from_branch, base=to_branch)
     not_merged = True
-    
-    for pull in pulls.__iter__():
-        if not pull.merged: 
-            not_merged = False
-            #break
+    pulls = []
+    for pull in all_pulls.__iter__():
+        if pull.head.ref == from_branch and pull.base.ref == to_branch:
+            pulls.append(pull)
+            if not pull.merged: 
+                not_merged = False
+                #break
 
     if not_merged:
         title = f"MERGING {from_branch} into {to_branch}"
@@ -40,7 +43,7 @@ def create_pr(repo,from_branch,to_branch):
 
 def parse_pip(pip_str):
     if "https://github.com" in pip_str:
-        match =  re.search(r'github.com/([\w\-_]+).git',pip_str )
+        match =  re.search(r'github.com/([^\.]+).git',pip_str )
         if match:
             return match.group(1)
     else:
@@ -141,3 +144,67 @@ def get_config(repo, branches, source_branch, target_branch):
         config['name']=re.search(r'name *= *[\'|""](.+)[\'|"]',package_conf ).group(1)
         config['nickname'] =re.search(r'openimis-be-(.+)$',config['name'] ).group(1).replace('-','_')
     return config
+
+def print_be_table(modules):
+    print("========================= references Be =================================")
+    print(f'|=HYPERLINK("https://github.com/openimis/openimis-be_py","Backend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-be_py/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |')
+
+    for module in modules:
+        print(f'|=HYPERLINK("{module["url"]}","BE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.pypi.org/project/{module["name"].replace("@openimis/", "").lower()}/{module["clean_version"]}","{module["name"]}")|')
+    
+def print_be_git_table(modules):    
+    print("========================= config git ===================================")
+    for module in modules:
+        print(f"""            {{
+            "name": "{module['nickname']}",
+            "pip": "git+{module['url']}.git@{RELEASE_NAME}#egg={module['name']}"
+        }},""")
+        
+def print_be_pip_table(modules):    
+    print("========================= config pip ===================================")
+    for module in modules:
+        print("""            {{
+            "name": "{}",
+            "pip": "{}=={}"
+        }},""".format(module['nickname'], module['name'], module['version']))
+def print_be_solution_builder(modules):
+    print("========================= config BE solution builder ===================================")
+    for module in modules:
+        print("""
+        "{0}":{{
+            "package": "{1}",
+            "git": "{2}",
+            "version": "{3}"
+        }},""".format(module['nickname'], module['name'],module["url"], module['version']))       
+
+def print_fe_table(modules):    
+    print("========================= references FE =================================")
+    print(f'|=HYPERLINK("https://github.com/openimis/openimis-fe_js","Frontend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-fe_js/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |')
+
+    for module in modules:
+        print(f'|=HYPERLINK("{module["url"]}","FE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.npmjs.com/package/@openimis/{module["name"].replace("@openimis/", "").lower()}/v/{module["clean_version"]}","npm:{module["name"]}")|')
+def print_fe_git_table(modules):
+    print("========================= config git ===================================")
+
+    print("FE config")
+    for module in modules:
+        print(f"""       {{
+            "name": "{module['nickname']}",
+            "npm": "{module['name']}@{module['git']}#{RELEASE_NAME}"
+        }},""")
+def print_fe_pip_table(modules):
+    print("========================= config npn ===================================")
+    for module in modules:
+        print("""            {{
+            "name": "{}Module",
+            "npm": "{}@>={}"
+        }},""".format(module['nickname'], module['name'], module['version']))
+def print_fe_solution_builder(modules):    
+    print("========================= config FE solution builder ===================================")
+    for module in modules:
+        print("""
+        "{0}Module":{{
+            "package": "{1}",
+            "git": "{2}",
+            "version": "{3}"
+        }},""".format(module['nickname'], module['name'],module["url"], module['version']))

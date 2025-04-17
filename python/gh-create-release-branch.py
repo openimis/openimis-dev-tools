@@ -2,7 +2,7 @@ import re
 from time import sleep
 from config import GITHUB_TOKEN, RELEASE_NAME, REPOS
 from github import Github # pip install pyGithub
-from utils import parse_pip, parse_npm, for_repos, get_repos_name, get_config
+from utils import *
 import json
 
 import semantic_version # pip install semantic-version
@@ -35,16 +35,11 @@ if __name__ == '__main__':
     fe_config = list(filter(lambda item: item['scope'] == 'fe', output))
     
     print("BE config")
-    for module in fe_config:
-        print(f"""            {{
-            "name": "{module['nickname']}",
-            "npm": "{module['url']}@{RELEASE_NAME}#egg={module['name']}"
-        }},""")
+    print_be_git_table(output)
+    print_be_pip_table(output)
+ 
     
     print("FE config")
-    for module in fe_config:
-        print(f"""       {{
-            "name": "{module['nickname']}",
-            "npm": "{module['name']}@{module['url']}#{RELEASE_NAME}"
-        }},""")
+    print_fe_git_table(output)
+    print_fe_pip_table(output)
 

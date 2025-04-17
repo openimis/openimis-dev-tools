@@ -51,7 +51,7 @@ def parse_pip(pip_str):
     
 def parse_npm(npm_str):
     if "https://github.com" in npm_str:
-        match =  re.search(r'github.com/(.+).git',npm_str )
+        match =  re.search(r'github.com/(.+)(?:.git)?(?:$|#)',npm_str )
         return match.group(1)
     else:
         match =  re.search(r'@openimis/(.+)@',npm_str )

@@ -1,5 +1,7 @@
 from config import  RELEASE_NAME
-from utils import get_repos_name,for_repos, get_config
+from utils import *
+
+
 import re
 import json
 import semantic_version  # pip install semantic-version
@@ -16,51 +18,21 @@ def main():
 
 
 def print_be_config(modules):
-    print("========================= references Be =================================")
-    print(f'|=HYPERLINK("https://github.com/openimis/openimis-be_py","Backend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-be_py/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |')
-
-    for module in modules:
-        print(f'|=HYPERLINK("{module["url"]}","BE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.pypi.org/project/{module["name"].replace("@openimis/", "").lower()}/{module["clean_version"]}","{module["name"]}")|')
-    print("========================= config git ===================================")
-    for module in modules:
-        print(f"""            {{
-            "name": "{module['nickname']}",
-            "pip": "{module['git']}@{RELEASE_NAME}#egg={module['name']}"
-        }},""")
-    print("========================= config pip ===================================")
-    for module in modules:
-        print("""            {{
-            "name": "{}",
-            "pip": "{}=={}"
-        }},""".format(module['nickname'], module['name'], module['version']))
-        
+    print_be_table(modules)
+    print_be_git_table(modules)
+    print_be_pip_table(modules)
+    print_be_solution_builder(modules)
+    
 
 
 
 def print_fe_config(modules):
-    print("========================= references FE =================================")
-    print(f'|=HYPERLINK("https://github.com/openimis/openimis-fe_js","Frontend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-fe_js/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |')
-
-    for module in modules:
-        print(f'|=HYPERLINK("{module["url"]}","FE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.npmjs.com/package/@openimis/{module["name"].replace("@openimis/", "").lower()}/v/{module["clean_version"]}","npm:{module["name"]}")|')
-
-    print("========================= config git ===================================")
-
-    print("FE config")
-    for module in modules:
-        print(f"""       {{
-            "name": "{module['nickname']}",
-            "npm": "{module['name']}@{module['git']}#{RELEASE_NAME}"
-        }},""")
-
-    print("========================= config npn ===================================")
-    for module in modules:
-        print("""            {{
-            "name": "{}Module",
-            "npm": "{}@>={}"
-        }},""".format(module['nickname'], module['name'], module['version']))
+    print_fe_table(modules)
+    print_fe_git_table(modules)
+    print_fe_pip_table(modules)
+    print_fe_solution_builder(modules)
     
-
+    
 
 
 def convert_to_title_case(text):
