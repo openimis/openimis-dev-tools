@@ -1,0 +1,6 @@
+[submodule "frontend"]
+	path = frontend
+	url = https://github.com/openimis/openimis-fe_js.git
+[submodule "backend"]
+	path = backend
+	url = https://github.com/openimis/openimis-be_py.git
