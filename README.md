@@ -2,6 +2,15 @@
 
 This repository group tools for developers to initialize and develop the openIMIS system. 
 
+## Development setting
+
+cloning with frontend and backend
+
+`git clone --recurse-submodules https://github.com/openimis/openimis-dev-tools.git`
+
+
+
+
 
 ## Python tools
 

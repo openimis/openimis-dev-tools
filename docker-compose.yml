@@ -1,0 +1,98 @@
+x-api: &default-api
+  build: 
+    context: ./backend
+  image: openimis-be-dev:latest
+  environment:
+    - DB_DEFAULT=postgresql
+    - PSQL_DB_USER=IMISuser
+    - PSQL_DB_PASSWORD=IMISuser@1234
+    - PSQL_DB_PORT=5432
+    - PSQL_DB_ENGINE=django.db.backends.postgresql
+    - PSQL_DB_HOST=db
+    - PSQL_DB_NAME=test_imis
+    - SITE_ROOT=api
+    - SITE_URL=host.docker.internal
+    - CELERY_BROKER_URL=amqp://rabbitmq
+    - MODE=${MODE:-Prod}
+    - HOSTS=${HOSTS}
+    - OPENSEARCH_ADMIN=${OPENSEARCH_ADMIN}
+    - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
+    - OPENSEARCH_HOSTS=${OPENSEARCH_HOSTS}
+  volumes:
+    - ./backend-packages:/backend-packages
+    - ./frontend:/app
+  depends_on:
+    db:
+      condition: service_healthy
+  restart: no
+services:
+  migrations:
+    <<: *default-api
+    command: init
+    volumes:
+    - ./backend-packages:/backend-packages
+    - ./backend:/openimis-be
+  frontend:
+    image: openimis-fe-dev:latest
+    volumes:
+    - ./frontend-packages:/frontend-packages
+    - ./frontend:/app
+    build: 
+      context: ./frontend
+      target: dev-stage
+      args:
+        BUILDKIT_CONTEXT_KEEP_GIT_DIR: true
+    ports:
+      - 3000:3000 
+  backend:
+    <<: *default-api
+    command: dev
+    restart: always
+    ports:
+      - 8000:8000 
+    depends_on:
+      migrations:
+        condition: service_completed_successfully   
+  db:
+    image: ghcr.io/openimis/openimis-pgsql:${DB_TAG:-develop}
+    environment:
+      - POSTGRES_PASSWORD=$PSQL_DB_PASSWORD
+      - POSTGRES_DB=$PSQL_DB_NAME
+      - POSTGRES_USER=$PSQL_DB_USER
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', "$PSQL_DB_USER", '-d', "test_imis"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - database:/var/lib/postgresql/data
+    restart: always
+    ports:
+      - 5435:5432
+  db-mssql:
+    image: ghcr.io/openimis/openimis-mssql:${DB_TAG:-develop}
+    restart: always
+    user: root
+    environment:
+      - DB_PASSWORD=$MSSQL_DB_PASSWORD
+      - SA_PASSWORD=$MSSQL_DB_PASSWORD
+      - DB_NAME=$MSSQL_DB_NAME
+      - DB_USER=$MSSQL_DB_USER
+      - ACCEPT_EULA=Y
+      - INIT_MODE=demo
+    healthcheck:
+      test: "bash /app/healthcheck.sh"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 100s
+    volumes:
+      - database-mssql:/var/opt/mssql/data
+    ports:
+      - 1435:1433
+volumes:
+  database:
+  database-mssql:
+
+

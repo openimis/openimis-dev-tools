@@ -6,6 +6,23 @@ from config import GITHUB_TOKEN, TIMER,  RELEASE_NAME
 from github import Github, PaginatedList
 import json
 
+
+
+def convert_to_title_case(text):
+    words = []
+    start_index = 0
+    for i in range(1, len(text)):
+        if text[i].isupper() or text[i] == '_':
+            word = text[start_index:i]
+            if word:  # Check if the word is not empty
+                words.append(word.capitalize())
+            # Skip the underscore
+            start_index = i + (1 if text.find('_') > -1 else 0)
+    last_word = text[start_index:].capitalize()  # Handle the last word
+    if last_word:
+        words.append(last_word)
+    return ' '.join(words)
+ 
 def create_pr(repo,from_branch,to_branch):
     #pulls = repo.get_pulls(state='open', sort='created', head='openimis:'+from_branch, base=to_branch)
     #if not list(pulls):
@@ -53,9 +70,28 @@ def parse_pip(pip_str):
     print("Error name not found")
     
 def parse_npm(npm_str):
+    match = re.search(r'github.com/(.+).git',npm_str )
+    if match:
+        return match.group(1)
+    else:
+        match = re.search(r'@openimis/(.+)@',npm_str )
+        if match:
+            return "openimis/openimis-" + match.group(1) + "_js"
+    
+def parse_pip_branch(pip_str):
+    match = re.search(r'github.com/.+.git@([\w_\-\/\.]+).*',pip_str )
+    if match:
+        return match.group(1)
+    else:
+        print("Error branch not found")
+        
+def parse_npm_branch(npm_str):
+    match = re.search(r'github.com/.+#([\w_\-\/\.]+)',npm_str )
+    if match:
+        return match.group(1)
+    else:
+        print("Error branch not found")
 
-    match =  re.search(r'@openimis/(.+)@',npm_str )
-    return "openimis/openimis-" + match.group(1) + "_js"
 
 def get_repos_name(ref_branch = 'develop'):
     g =Github(GITHUB_TOKEN)
@@ -84,8 +120,37 @@ def  create_pr_repo(repo, branches,from_branch, to_branch):
     if to_branch in branches and from_branch in branches:
         pr_id = create_pr(repo, from_branch, to_branch)
 
-
-  
+def walk_config_be(g,be, callback):
+    res = []
+    for module in be['modules']:
+        module_name = parse_pip(module['pip'])
+        if module_name is not None:
+            repo = g.get_repo(module_name)
+            ref = parse_pip_branch(module['pip'])
+            if ref in [b.name for b in list(repo.get_branches())]:
+                r = callback(repo, module['name'], ref=ref)
+            else:
+                r = callback(repo, module['name'])
+            if r is not None:
+                res.append(r)
+                
+    return res
+def walk_config_fe(g,fe, callback):
+    res = []
+    for module in fe['modules']:
+        module_name = parse_npm(module['npm'])
+        if module_name is not None:
+            repo = g.get_repo(module_name)
+            ref = parse_npm_branch(module['npm'])
+            if ref in [b.name for b in list(repo.get_branches())]:
+                r = callback(repo, module['name'], ref=ref)
+            else:
+                r = callback(repo, module['name'])
+            if r is not None:
+                res.append(r)
+                
+    return res
+ 
 def flatten_json(y):
     out = {}
 

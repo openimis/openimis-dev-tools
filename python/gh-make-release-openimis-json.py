@@ -35,22 +35,6 @@ def print_fe_config(modules):
     
 
 
-def convert_to_title_case(text):
-    words = []
-    start_index = 0
-    for i in range(1, len(text)):
-        if text[i].isupper() or text[i] == '_':
-            word = text[start_index:i]
-            if word:  # Check if the word is not empty
-                words.append(word.capitalize())
-            # Skip the underscore
-            start_index = i + (1 if text.find('_') > -1 else 0)
-    last_word = text[start_index:].capitalize()  # Handle the last word
-    if last_word:
-        words.append(last_word)
-    return ' '.join(words)
-
-
 
 if __name__ == '__main__':
     main()

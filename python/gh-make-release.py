@@ -27,7 +27,7 @@ def create_release(repo,branches, from_branch, to_branch):
             latest_release_tag =latest_release_tag[1:]
         if len(latest_release_tag)>5:
             latest_release_tag =latest_release_tag[:5]
-        if nb_commit > 2:
+        if nb_commit > 1:
             v = "v"+str(semantic_version.Version(latest_release_tag).next_minor())
             print("new minor: module {} version {}".format(repo.name, str(v)))
         elif nb_commit > 0:
