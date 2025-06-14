@@ -4,13 +4,21 @@ This repository group tools for developers to initialize and develop the openIMI
 
 ## Development setting
 
-cloning with frontend and backend
+### cloning with frontend and backend
 
 `git clone --recurse-submodules https://github.com/openimis/openimis-dev-tools.git`
 
+### download the packages
 
+`python setup-local-dev.py`, 
 
+    a solution name can be added 
 
+    `python setup-local-dev.py CoreMIS`, 
+
+### starting docker
+
+`docker compose up -d`
 
 ## Python tools
 
