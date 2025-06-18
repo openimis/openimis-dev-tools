@@ -18,7 +18,7 @@ This repository group tools for developers to initialize and develop the openIMI
 
 ### starting docker
 
-`docker compose up -d`
+`docker compose up --build -d `
 
 ## Python tools
 
