@@ -6,12 +6,10 @@ import git  # pip install GitPython
 from github import Github  # pip install pyGithub
 import sys
 ref_assembly = BRANCH#"develop"
-MODE = None
+MODE = 'ssh'
 if len(sys.argv) > 2:
     MODE = sys.argv[2]
 SOLUTION = None
-if len(sys.argv) > 1:
-    SOLUTION = sys.argv[1]
 
 
 def load_solution_configs(g, solutions, SOLUTION, ref_assembly):
@@ -77,7 +75,7 @@ def main():
 
 def get_remote(repo, mode = None):
     if mode == 'ssh':
-        remote = f"git@github.com:openimis/openimis-be_py.git"
+        remote = repo.ssh_url
     elif GITHUB_TOKEN:
         remote = f"https://{USER_NAME}:{GITHUB_TOKEN}@{repo.git_url[6:]}"
     else:

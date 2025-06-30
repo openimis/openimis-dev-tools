@@ -18,6 +18,7 @@ x-api: &default-api
     - OPENSEARCH_ADMIN=${OPENSEARCH_ADMIN}
     - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
     - OPENSEARCH_HOSTS=${OPENSEARCH_HOSTS}
+    - AXES_ENABLED=False
   volumes:
     - ./backend-packages:/backend-packages
     - ./frontend:/app
@@ -44,6 +45,15 @@ services:
         BUILDKIT_CONTEXT_KEEP_GIT_DIR: true
     ports:
       - 3000:3000 
+    environment:
+      - NODE_ENV=development
+      - PUBLIC_URL=/front
+      - REACT_APP_API_URL=/api
+      - OPENIMIS_CONF_JSON=
+      - OPENIMIS_CONF=../openimis-dev.json
+  
+
+
   backend:
     <<: *default-api
     command: dev
