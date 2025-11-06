@@ -9,8 +9,10 @@ This repository group tools for developers to initialize and develop the openIMI
 `git clone --recurse-submodules https://github.com/openimis/openimis-dev-tools.git`
 
 ### download the packages
-
-`python setup-local-dev.py`, 
+```
+pip install -r requirements.txt
+python python/setup-local-dev.py
+``` 
 
     a solution name can be added 
 
