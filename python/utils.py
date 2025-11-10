@@ -48,7 +48,7 @@ def create_pr(repo,from_branch,to_branch):
             if '@@' in  str(diff_str):
                 print("PR created between  {} and  {}  for repo {}".format(from_branch,to_branch, repo.name))
                 sleep(TIMER)
-                pr = repo.create_pull(title=title, body=title, head=from_branch, base=to_branch)
+                pr = repo.create_pull(title=title, body=title, head=from_branch, base=to_branch, draft=True)
                 return pr.number
             else:
                 print("no change despite commit between  {} and  {}  for repo {}".format(from_branch,to_branch, repo.name))
@@ -70,14 +70,21 @@ def parse_pip(pip_str):
     print("Error name not found")
     
 def parse_npm(npm_str):
-    match = re.search(r'github.com/(.+).git',npm_str )
+    match = re.search(r'@openimis/(?:fe-)?(.+)@',npm_str )
     if match:
-        return match.group(1)
+        return "openimis/openimis-fe-" + match.group(1) + "_js"
     else:
-        match = re.search(r'@openimis/(.+)@',npm_str )
+        match = re.search(r'github.com/(.+).git',npm_str )
         if match:
-            return "openimis/openimis-" + match.group(1) + "_js"
+            return match.group(1)
     
+def parse_npm_github(npm_str):
+    match = re.search(r'^(?:.+@)?([^#@]+)',npm_str )
+    if match:
+        match = re.search(r'github.com[:/](.+)',match.group(1) )
+        if match:
+            return match.group(1)
+            
 def parse_pip_branch(pip_str):
     match = re.search(r'github.com/.+.git@([\w_\-\/\.]+).*',pip_str )
     if match:
@@ -137,17 +144,22 @@ def walk_config_be(g,be, callback):
     return res
 def walk_config_fe(g,fe, callback):
     res = []
+    
     for module in fe['modules']:
         module_name = parse_npm(module['npm'])
-        if module_name is not None:
-            repo = g.get_repo(module_name)
-            ref = parse_npm_branch(module['npm'])
-            if ref in [b.name for b in list(repo.get_branches())]:
-                r = callback(repo, module['name'], ref=ref)
-            else:
-                r = callback(repo, module['name'])
-            if r is not None:
-                res.append(r)
+        if 'file:' in module['npm']:
+            pass
+        elif module_name is not None:
+            repo_url = parse_npm_github(module['npm'])
+            if repo_url:
+                repo = g.get_repo(repo_url)
+                ref = parse_npm_branch(module['npm'])
+                if ref in [b.name for b in list(repo.get_branches())]:
+                    r = callback(repo, module['name'], ref=ref)
+                else:
+                    r = callback(repo, module['name'])
+                if r is not None:
+                    res.append(r)
                 
     return res
  
@@ -211,65 +223,74 @@ def get_config(repo, branches, source_branch, target_branch):
     return config
 
 def print_be_table(modules):
-    print("========================= references Be =================================")
-    print(f'|=HYPERLINK("https://github.com/openimis/openimis-be_py","Backend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-be_py/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |')
+    with open('be_references.txt', 'w') as f:
+        f.write(f'|=HYPERLINK("https://github.com/openimis/openimis-be_py","Backend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-be_py/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |' + '\n')
 
-    for module in modules:
-        print(f'|=HYPERLINK("{module["url"]}","BE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.pypi.org/project/{module["name"].replace("@openimis/", "").lower()}/{module["clean_version"]}","{module["name"]}")|')
+        for module in modules:
+            f.write(f'|=HYPERLINK("{module["url"]}","BE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.pypi.org/project/{module["name"].replace("@openimis/", "").lower()}/{module["clean_version"]}","{module["name"]}")|' + '\n')
     
-def print_be_git_table(modules):    
-    print("========================= config git ===================================")
-    for module in modules:
-        print(f"""            {{
+def print_be_git_table(modules):
+    with open('openimis-be-git.json', 'w') as f:
+        modules_json = []
+        for module in modules:
+            modules_json.append(f"""{{"
             "name": "{module['nickname']}",
-            "pip": "git+{module['url']}.git@{RELEASE_NAME}#egg={module['name']}"
-        }},""")
-        
-def print_be_pip_table(modules):    
-    print("========================= config pip ===================================")
-    for module in modules:
-        print("""            {{
+            "pip": "{module['name']}=={module['version']}"
+        }},""" + '\n')
+        f.write(f"""{{"modules": [{",".join(modules_json)}]}}""")
+def print_be_pip_table(modules):
+    with open('openimis-be-pip.json', 'w') as f:
+        modules_json = []
+        for module in modules:
+            modules_json.append("""{{
             "name": "{}",
             "pip": "{}=={}"
-        }},""".format(module['nickname'], module['name'], module['version']))
+        }},""".format(module['nickname'], module['name'], module['version']) + '\n')
+        f.write(f"""{{"be_source_package": [{",".join(modules_json)}]}}""")
 def print_be_solution_builder(modules):
-    print("========================= config BE solution builder ===================================")
-    for module in modules:
-        print("""
-        "{0}":{{
+    with open('source-be.json', 'w') as f:
+        modules_json = []
+        for module in modules:
+            modules_json.append(""""{0}":{{
             "package": "{1}",
             "git": "{2}",
             "version": "{3}"
-        }},""".format(module['nickname'], module['name'],module["url"], module['version']))       
+        }}""".format(module['nickname'], module['name'],module["url"], module['version']) + "\n")
+        f.write(f"""{{"be_source_package": [{",".join(modules_json)}]}}""")
 
-def print_fe_table(modules):    
-    print("========================= references FE =================================")
-    print(f'|=HYPERLINK("https://github.com/openimis/openimis-fe_js","Frontend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-fe_js/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |')
-
-    for module in modules:
-        print(f'|=HYPERLINK("{module["url"]}","FE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.npmjs.com/package/@openimis/{module["name"].replace("@openimis/", "").lower()}/v/{module["clean_version"]}","npm:{module["name"]}")|')
+def print_fe_table(modules):
+    with open('fe_references.txt', 'w') as f:
+        f.write(f'|=HYPERLINK("https://github.com/openimis/openimis-fe_js","Frontend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-fe_js/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |' + '\n')
+        for module in modules:
+            f.write(f'|=HYPERLINK("{module["url"]}","FE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.npmjs.com/package/@openimis/{module["name"].replace("@openimis/", "").lower()}/v/{module["clean_version"]}","npm:{module["name"]}")|' + '\n')
 def print_fe_git_table(modules):
-    print("========================= config git ===================================")
-
-    print("FE config")
-    for module in modules:
-        print(f"""       {{
+    with open('openimis-fe-git.json', 'w') as f:
+        modules_json = []
+        for module in modules:
+            modules_json.append(f"""{{
             "name": "{module['nickname']}",
             "npm": "{module['name']}@{module['git']}#{RELEASE_NAME}"
-        }},""")
-def print_fe_pip_table(modules):
-    print("========================= config npn ===================================")
-    for module in modules:
-        print("""            {{
-            "name": "{}Module",
-            "npm": "{}@>={}"
-        }},""".format(module['nickname'], module['name'], module['version']))
-def print_fe_solution_builder(modules):    
-    print("========================= config FE solution builder ===================================")
-    for module in modules:
-        print("""
-        "{0}Module":{{
+        }},""" + '\n')
+        f.write(f"""{{"modules": [{",".join(modules_json)}]}}""")
+        
+def print_fe_npm_table(modules):
+    with open('openimis-fe-npm.json', 'w') as f:
+        modules_json = []
+        for module in modules:
+            modules_json.append(f"""{{
+            "name": "{module['nickname']}Module",
+            "npm": "{module['name']}@>={module['version']}"
+        }},""" + '\n')
+        f.write(f"""{{"modules": [{",".join(modules_json)}]}}""")
+def print_fe_solution_builder(modules):
+    with open('source-fe.json', 'w') as f:
+  
+        modules_json = []
+        for module in modules:
+            modules_json.append(""""{0}":{{
+           "{0}Module":{{
             "package": "{1}",
             "git": "{2}",
             "version": "{3}"
-        }},""".format(module['nickname'], module['name'],module["url"], module['version']))
+        }},""".format(module['nickname'], module['name'],module["url"], module['version']) + '\n')
+        f.write(f"""{{"be_source_package": [{",".join(modules_json)}]}}""")
