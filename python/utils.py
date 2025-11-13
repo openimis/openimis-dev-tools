@@ -233,10 +233,10 @@ def print_be_git_table(modules):
     with open('openimis-be-git.json', 'w') as f:
         modules_json = []
         for module in modules:
-            modules_json.append(f"""{{"
+            modules_json.append(f"""{{
             "name": "{module['nickname']}",
-            "pip": "{module['name']}=={module['version']}"
-        }},""" + '\n')
+            "pip": "git+{module['url']}.git@{RELEASE_NAME}#egg={module['name']}"
+        }}""" + '\n')
         f.write(f"""{{"modules": [{",".join(modules_json)}]}}""")
 def print_be_pip_table(modules):
     with open('openimis-be-pip.json', 'w') as f:
@@ -245,7 +245,7 @@ def print_be_pip_table(modules):
             modules_json.append("""{{
             "name": "{}",
             "pip": "{}=={}"
-        }},""".format(module['nickname'], module['name'], module['version']) + '\n')
+        }}""".format(module['nickname'], module['name'], module['version']) + '\n')
         f.write(f"""{{"be_source_package": [{",".join(modules_json)}]}}""")
 def print_be_solution_builder(modules):
     with open('source-be.json', 'w') as f:
@@ -270,7 +270,7 @@ def print_fe_git_table(modules):
             modules_json.append(f"""{{
             "name": "{module['nickname']}",
             "npm": "{module['name']}@{module['git']}#{RELEASE_NAME}"
-        }},""" + '\n')
+        }}""" + '\n')
         f.write(f"""{{"modules": [{",".join(modules_json)}]}}""")
         
 def print_fe_npm_table(modules):
@@ -278,9 +278,9 @@ def print_fe_npm_table(modules):
         modules_json = []
         for module in modules:
             modules_json.append(f"""{{
-            "name": "{module['nickname']}Module",
+            "name": "{module['nickname']}",
             "npm": "{module['name']}@>={module['version']}"
-        }},""" + '\n')
+        }}""" + '\n')
         f.write(f"""{{"modules": [{",".join(modules_json)}]}}""")
 def print_fe_solution_builder(modules):
     with open('source-fe.json', 'w') as f:
@@ -292,5 +292,5 @@ def print_fe_solution_builder(modules):
             "package": "{1}",
             "git": "{2}",
             "version": "{3}"
-        }},""".format(module['nickname'], module['name'],module["url"], module['version']) + '\n')
-        f.write(f"""{{"be_source_package": [{",".join(modules_json)}]}}""")
+        }}""".format(module['nickname'], module['name'],module["url"], module['version']) + '\n')
+        f.write(f"""{{"be_source_package": {{{",".join(modules_json)}]}}}}""")

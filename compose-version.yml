@@ -1,0 +1,127 @@
+version: '3.8'
+
+x-api: &default-api
+  build:
+    context: ./backend
+  image: openimis-be-dev:latest
+  environment:
+    - DB_DEFAULT=postgresql
+    - PSQL_DB_USER=${PSQL_DB_USER}
+    - PSQL_DB_PASSWORD=${PSQL_DB_PASSWORD}
+    - PSQL_DB_PORT=5432
+    - PSQL_DB_ENGINE=django.db.backends.postgresql
+    - PSQL_DB_HOST=db
+    - PSQL_DB_NAME=${PSQL_DB_NAME}
+    - SITE_ROOT=api
+    - SITE_URL=host-gateway
+    - ASYNC=False
+    - MODE=DEV
+    - DOMAIN=localhost
+    - HOSTS=host-gateway,localhost,127.0.0.1,192.168.0.1,backend-dev,backend-prod,*
+    - PROTOS=https,http
+    - OPENSEARCH_DSL_AUTOSYNC=False
+    - AXES_ENABLED=False
+  depends_on:
+    db:
+      condition: service_healthy
+  restart: no
+  #extra_hosts:
+  #  - "host.docker.internal:host-gateway"
+
+services:
+  migrations-dev:
+    <<: *default-api
+    command: init-dev
+    environment:
+      - OPENIMIS_CONF=../openimis-dev.json
+    volumes:
+      - ./backend-packages:/backend-packages
+      - ./backend:/openimis-be
+      - pip-cache:/pip-cache
+
+    # profiles:
+    #   - dev-be
+  migrations-prod:
+    <<: *default-api
+    command: init
+    image: ghcr.io/openimis/openimis-be:${BE_TAG:-develop}
+    volumes:
+      - ./backend/openIMIS:/openimis-be/openIMIS
+      - ./backend/script:/openimis-be/script
+  # Backend: Dev Configuration
+  backend-dev:
+    <<: *default-api
+    build:
+      context: ./backend
+      target: dev  # Use dev stage - modules installed at runtime with caching
+    command: dev
+    # profiles:
+    #   - dev-be
+    restart: always
+    ports:
+      - 8000:8000
+      - 5678:5678
+    environment:
+      - OPENIMIS_CONF=../openimis-dev.json
+    volumes:
+      - ./backend-packages:/backend-packages
+      - ./backend:/openimis-be
+      - pip-cache:/pip-cache
+
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+
+  # Backend: Prod Configuration
+  backend-prod:
+    <<: *default-api
+    image: ghcr.io/openimis/openimis-be:${BE_TAG:-develop}
+    command: start_wsgi  # Production command (adjust as needed)
+    # profiles:
+    #   - prod-be
+    restart: always
+    ports:
+      - 8000:8000
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+
+  # Frontend: Dev Configuration
+  frontend-dev:
+    image: openimis-fe-dev:latest
+    build:
+      context: ./frontend
+      target: dev-stage
+      args:
+        BUILDKIT_CONTEXT_KEEP_GIT_DIR: true
+    volumes:
+      - ./frontend-packages:/frontend-packages
+      - ./frontend:/app
+      - ./nodes_volume:/app/node_modules:rw
+    ports:
+      - 3000:3000
+    environment:
+      - NODE_ENV=development
+      - PUBLIC_URL=/front
+      - REACT_APP_API_URL=/api
+      - OPENIMIS_CONF_JSON=
+      - OPENIMIS_CONF=../openimis-dev.json
+      - API_PROXY_TARGET=${API_PROXY_TARGET:-http://backend:8000}
+    # profiles:
+    #   - dev-fe
+
+  # Frontend: Prod Configuration
+  frontend-prod:
+    image: ghcr.io/openimis/openimis-fe:${FE_TAG:-develop}
+    ports:
+      - 3000:80
+      - 30433:443
+    environment:
+      - REACT_APP_API_URL=api
+      - NEW_OPENIMIS_HOST=localhost
+      - PORTS=443,80,3000,3443
+      #- OPENIMIS_CONF_JSON=${OPENIMIS_FE_CONF_JSON}
+      - OPENSEARCH_BASIC_TOKEN=${OPENSEARCH_BASIC_TOKEN}
+      - NODE_ENV=development
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
