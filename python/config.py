@@ -1,6 +1,0 @@
-GITHUB_TOKEN="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"
-REPOS =  []
-USER_NAME='delcroip'
-RELEASE_NAME='release/25.10'
-BRANCH='release/25.10'
-TIMER=5
