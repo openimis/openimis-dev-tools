@@ -9,8 +9,10 @@ This repository group tools for developers to initialize and develop the openIMI
 `git clone --recurse-submodules https://github.com/openimis/openimis-dev-tools.git`
 
 ### download the packages
-
-The `python/setup-local-dev.py` script sets up the local development environment by cloning or updating all required backend and frontend modules.
+```
+pip install -r requirements.txt
+python python/setup-local-dev.py
+``` 
 
 **Basic usage:**
 ```bash
