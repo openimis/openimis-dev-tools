@@ -14,13 +14,76 @@ pip install -r requirements.txt
 python python/setup-local-dev.py
 ``` 
 
-    a solution name can be added 
+**Basic usage:**
+```bash
+python setup-local-dev.py
+```
 
-    `python setup-local-dev.py CoreMIS`, 
+**With a solution name:**
+```bash
+python setup-local-dev.py CoreMIS
+```
+
+**Parameters:**
+- `SOLUTION` (optional): Name of a solution from the `openimis/solutions` repository. If provided, loads BE and FE configurations from the solutions repo. If not provided, uses local `backend/openimis.json` and `frontend/openimis.json` files.
+- `MODE` (optional, second argument): Connection mode for Git operations. Options:
+  - `ssh` (default): Uses SSH URLs for cloning
+  - Other modes use HTTPS with GitHub token authentication
+
+**What it does:**
+1. Loads backend and frontend module configurations
+2. Clones or updates each module repository to the appropriate branch
+3. Generates `backend/openimis-dev.json` and `frontend/openimis-dev.json` with local module paths
+4. Backend modules are cloned to `backend-packages/`, frontend modules to `frontend-packages/`
+
+**Configuration:**
+Edit `python/config.py` to set:
+- `GITHUB_TOKEN`: GitHub personal access token for API access
+- `USER_NAME`: Your GitHub username
+- `BRANCH`: Default branch to checkout (e.g., 'develop', 'release/25.10')
+- `TIMER`: Delay between API calls to avoid rate limits
+
+**Requirements:**
+- Python 3.x
+- GitPython (`pip install GitPython`)
+- PyGithub (`pip install PyGithub`)
+- Valid GitHub token with repo access permissions
 
 ### starting docker
 
 `docker compose up --build -d `
+
+#### Docker Compose Configuration
+
+The main `compose.yml` file uses Docker Compose's `extends` feature to reference service definitions from `compose-version.yml`. This allows for modular configuration of different environments and services.
+
+- `compose.yml`: Main orchestration file that defines the services to run and their relationships.
+- `compose-version.yml`: Contains detailed service configurations for backend, frontend, and database services in different modes (dev, prod, debug).
+
+To run specific services, use profiles or service names. For example:
+- `docker compose --profile migrations up migrations` - Run only migrations
+- `docker compose up backend frontend` - Run specific services
+
+#### Available Services
+
+| Service Name | Type | Environment | Description |
+|--------------|------|-------------|-------------|
+| `migrations-dev` | Backend | Development | Runs database migrations and initial setup. Installs Python modules into shared venv. |
+| `backend-dev` | Backend | Development | Django development server with auto-reload. Uses shared venv for modules. |
+| `backend-debug` | Backend | Debug | Django server with debugpy for remote debugging. Uses shared venv for modules. |
+| `backend-prod` | Backend | Production | Production-ready Django server with gunicorn. |
+| `frontend-dev` | Frontend | Development | React development server with hot reload. |
+| `frontend-prod` | Frontend | Production | Nginx serving built React application. |
+| `db` | Database | N/A | PostgreSQL database server. |
+| `db-mssql` | Database | N/A | Microsoft SQL Server database server. |
+
+#### Shared Virtual Environment for Backend Containers
+
+The backend containers (migrations, backend-dev, backend-debug) now use a shared virtual environment volume (`venv`) to store installed Python modules. This prevents the need to reinstall modules each time a container starts, improving startup times and avoiding import failures.
+
+- The `venv` volume is automatically created and mounted at `/venv` in the containers.
+- Modules are installed into this shared environment, so once installed by one container (e.g., migrations), they are available to others.
+- If you need to clear the installed modules, remove the `venv` volume: `docker compose down -v` (this will remove all volumes).
 
 ## Python tools
 
@@ -72,35 +135,3 @@ create docs
 First you need to install or access the legacy openIMIS (at least the DB for the BE).
 
 Make sure you have python installed in your computer and the python command is accessible (python bin folder is in PATH).
-
-### Initializing modular BE in Windows
-
-
-First download this repository to your computer (i.e. C:\openimis-dev-tools). 
-
-Edit the ```windows\install_openimis_dev.ps1``` and change the database connection parameters, the Django superuser account and the installation folder. Other parameters can be modified.
-
-```
-$db_host="mssql-host-server"
-$db_port="1433"
-$db_name="database-name"
-$db_user="database-user"
-$db_password="database-password"
-
-$DJANGO_SUPERUSER_USERNAME="spiderman"
-$DJANGO_SUPERUSER_PASSWORD="spiderman"
-$DJANGO_SUPERUSER_EMAIL="spiderman@openimis.org"
-
-$project_dir = "C:\openIMIS"
-```
-
-Open a powershell console and execute following commands (please adapt with your download folder). You might need to use an administrator account or open the powershell with administrator rights. 
-
-```
-cd C:\openimis-dev-tools\windows 
-. install_openimis_dev.ps1
-init-be-environment
-run-be
-```
-
-By default, openIMIS will be initialized in ```C:\openIMIS``` folder. 
