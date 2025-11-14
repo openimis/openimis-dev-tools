@@ -1,0 +1,6 @@
+GITHUB_TOKEN=""
+REPOS =  []
+USER_NAME=''
+RELEASE_NAME='release/25.04'
+BRANCH='develop'
+TIMER=5
