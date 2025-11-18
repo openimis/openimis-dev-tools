@@ -29,7 +29,7 @@ def print_be_config(modules):
 def print_fe_config(modules):
     print_fe_table(modules)
     print_fe_git_table(modules)
-    print_fe_pip_table(modules)
+    print_fe_npm_table(modules)
     print_fe_solution_builder(modules)
     
     

@@ -11,6 +11,26 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "Python: Remote Attach (backend-dev)",
+            "type": "python",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/backend",
+                    "remoteRoot": "/openimis-be"
+                },
+                {
+                    "localRoot": "${workspaceFolder}/backend-packages",
+                    "remoteRoot": "/backend-packages"
+                }
+            ],
+            "justMyCode": true
         }
     ]
 }
