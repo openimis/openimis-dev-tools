@@ -3,7 +3,7 @@
 
 # You will first have to be in the dev tools directory, so don't forget to: 
 # cd openimis-dev-tools 
-BRANCH_NAME="release/25.10"
+BRANCH_NAME="develop"
 
 # Pull changes for the backend assembly
 (cd backend && git checkout $BRANCH_NAME)
