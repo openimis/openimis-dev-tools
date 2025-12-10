@@ -5,6 +5,16 @@
 # cd openimis-dev-tools 
 BRANCH_NAME="develop"
 
+prompt_for_branch() {
+    read -r -p "Enter the branch name (e.g., develop, release/25.10): " BRANCH_NAME
+    if [ -z "$BRANCH_NAME" ]; then
+        echo "Branch name not specified, defaulting to 'develop'"
+	BRANCH_NAME="develop"
+    fi
+}
+
+prompt_for_branch
+
 # Pull changes for the backend assembly
 (cd backend && git checkout $BRANCH_NAME)
 
