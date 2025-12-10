@@ -1,2 +1,9 @@
 *config.py
 *.pyc
+.idea/
+.vscode/
+/frontend-packages/
+/backend-packages/
+.venv
+.env
+
