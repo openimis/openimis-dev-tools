@@ -1,23 +1,22 @@
-from config import GITHUB_TOKEN, USER_NAME, BRANCH
+from config import GITHUB_TOKEN, USER_NAME, BRANCH_BE, BRANCH_FE. BRANCH_SOL
 from utils import parse_pip, walk_config_be, walk_config_fe
 import os
 import json
 import git  # pip install GitPython
 from github import Github  # pip install pyGithub
 import sys
-ref_assembly = BRANCH#"develop"
 MODE = 'ssh'
 if len(sys.argv) > 2:
     MODE = sys.argv[2]
 SOLUTION = None
 
 
-def load_solution_configs(g, solutions, SOLUTION, ref_assembly):
+def load_solution_configs(g, solutions, SOLUTION, BRANCH_BE):
     # Initialize repository
     repo = g.get_repo(solutions)
     
     # Get list of directories at the root of the repository
-    contents = repo.get_contents("", ref=ref_assembly)
+    contents = repo.get_contents("", ref=BRANCH_SOL)
     
     # Find directory matching SOLUTION (case-insensitive)
     dir_solution = None
@@ -27,18 +26,18 @@ def load_solution_configs(g, solutions, SOLUTION, ref_assembly):
             break
     
     if not dir_solution:
-        raise ValueError(f"No directory matching '{SOLUTION}' found in repository {solutions} at ref {ref_assembly}")
+        raise ValueError(f"No directory matching '{SOLUTION}' found in repository {solutions} at ref {BRANCH_BE}")
     
     # Load be-openimis.json
     try:
-        be_content = repo.get_contents(f"{dir_solution}/be-openimis.json", ref=ref_assembly)
+        be_content = repo.get_contents(f"{dir_solution}/be-openimis.json", ref=BRANCH_BE)
         be = json.loads(be_content.decoded_content)
     except Exception as e:
         raise ValueError(f"Failed to load {dir_solution}/be-openimis.json: {str(e)}")
     
     # Load fe-openimis.json
     try:
-        fe_content = repo.get_contents(f"{dir_solution}/fe-openimis.json", ref=ref_assembly)
+        fe_content = repo.get_contents(f"{dir_solution}/fe-openimis.json", ref=BRANCH_FE)
         fe = json.loads(fe_content.decoded_content)
     except Exception as e:
         raise ValueError(f"Failed to load {dir_solution}/fe-openimis.json: {str(e)}")
@@ -55,7 +54,7 @@ def main():
     if SOLUTION:
         solutions = 'openimis/solutions'
         repo = g.get_repo(solutions)
-        be, fe = load_solution_configs(g, solutions, SOLUTION, ref_assembly)
+        be, fe = load_solution_configs(g, solutions, SOLUTION, BRANCH_SOL)
     else:
         with open("./backend/openimis.json", "r") as infile:
             be = json.load(infile)
