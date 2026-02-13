@@ -1,4 +1,4 @@
-from config import GITHUB_TOKEN, USER_NAME, BRANCH_BE, BRANCH_FE. BRANCH_SOL
+from config import GITHUB_TOKEN, USER_NAME, BRANCH_BE, BRANCH_FE, BRANCH_SOL
 from utils import parse_pip, walk_config_be, walk_config_fe
 import os
 import json
