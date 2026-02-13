@@ -2,8 +2,9 @@
 *.pyc
 .idea/
 .vscode/
-/frontend-packages/
-/backend-packages/
+frontend-packages/
+backend-packages/
 .venv
 .env
-
+nodes_volume
+node_modules
