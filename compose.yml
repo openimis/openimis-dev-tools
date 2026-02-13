@@ -1,11 +1,11 @@
 services:
   backend:
     extends:
-      service: backend-dev
+      service: backend-proxy
       file: compose-version.yml
   migrations:
     extends:
-      service: migrations-dev
+      service: migrations-prod
       file: compose-version.yml
   frontend:
     extends:
