@@ -1,11 +1,18 @@
-from config import GITHUB_TOKEN, USER_NAME, BRANCH_BE, BRANCH_FE, BRANCH_SOL
+from config import (
+    GITHUB_TOKEN,
+    USER_NAME,
+    BRANCH_BE,
+    BRANCH_FE,
+    BRANCH_SOL,
+    MODE
+)
 from utils import parse_pip, walk_config_be, walk_config_fe
 import os
 import json
 import git  # pip install GitPython
 from github import Github  # pip install pyGithub
 import sys
-MODE = 'ssh'
+
 if len(sys.argv) > 2:
     MODE = sys.argv[2]
 SOLUTION = None

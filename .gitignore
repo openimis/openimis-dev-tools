@@ -1,2 +1,7 @@
 *config.py
 *.pyc
+.venv
+nodes_volume
+node_modules
+frontend-packages
+backend-packages
