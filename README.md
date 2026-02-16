@@ -9,7 +9,7 @@ This repository group tools for developers to initialize and develop the openIMI
 - PyGithub (`pip install PyGithub`)
 - Valid GitHub token with repo access permissions
 
-## Development setting
+## Development setup
 
 ### Cloning with frontend and backend
 
@@ -53,9 +53,9 @@ python setup-local-dev.py CoreMIS
 4. Backend modules are cloned to `backend-packages/`, frontend modules to `frontend-packages/`
 
 
-### Developing locally
+## Running the openIMIS code locally
 
-#### Run the Frontend locally
+### Run the Frontend locally
 ```bash
 cd frontend
 # install all modules
@@ -68,7 +68,7 @@ npm  install --include=dev --legacy-peer-deps
 npm run start
 ```
 
-#### Run the Backend locally 
+### Run the Backend locally 
  
 PYTHON 3.11 or 3.12 recommended, 3.14 DOES NOT WORK!!!
 
@@ -91,11 +91,11 @@ OPENIMIS_CONF=../openimis-dev.json python manage.py migrate
 OPENIMIS_CONF=../openimis-dev.json python manage.py runserver
 
 ```
-### Starting docker
+## Running openIMIS with Docker
 
 `docker compose up --build -d `
 
-#### Docker Compose Configuration
+### Docker Compose Configuration
 
 The main `compose.yml` file uses Docker Compose's `extends` feature to reference service definitions from `compose-version.yml`. This allows for modular configuration of different environments and services.
 
@@ -106,7 +106,7 @@ To run specific services, use profiles or service names. For example:
 - `docker compose --profile migrations up migrations` - Run only migrations
 - `docker compose up backend frontend` - Run specific services
 
-#### Available Services
+### Available Services
 
 | Service Name | Type | Environment | Description |
 |--------------|------|-------------|-------------|
@@ -119,7 +119,7 @@ To run specific services, use profiles or service names. For example:
 | `db` | Database | N/A | PostgreSQL database server. |
 | `db-mssql` | Database | N/A | Microsoft SQL Server database server. |
 
-#### Shared Virtual Environment for Backend Containers
+### Shared Virtual Environment for Backend Containers
 
 The backend containers (migrations, backend-dev, backend-debug) now use a shared virtual environment volume (`venv`) to store installed Python modules. This prevents the need to reinstall modules each time a container starts, improving startup times and avoiding import failures.
 
