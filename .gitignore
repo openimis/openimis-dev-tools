@@ -1,7 +1,10 @@
 *config.py
 *.pyc
+.idea/
+.vscode/
+frontend-packages/
+backend-packages/
 .venv
+.env
 nodes_volume
 node_modules
-frontend-packages
-backend-packages
