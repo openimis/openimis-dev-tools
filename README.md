@@ -49,6 +49,46 @@ Edit `python/config.py` to set:
 - PyGithub (`pip install PyGithub`)
 - Valid GitHub token with repo access permissions
 
+### developing locally
+
+#### frontend
+```bash
+cd frontend
+# install all modules
+node dev_tools/entrypoint-dev.js 
+# load the module in assembly
+npm run load-config -c ./openimis.json
+# install node packages
+npm  install --include=dev --legacy-peer-deps
+# run app (need backend up or error 500)
+npm run start
+
+
+```
+
+#### backend 
+ 
+PYTHON 3.11 or 3.12 recommended, 3.14 DOES NOT WORK
+
+```bash
+cd backend
+# install assembly requirements
+pip install -r requirements.txt
+# get the requirement for all modules
+python script/modules-requirements.py ../openimis-dev.json > script/modules-requirements.txt
+# install modules requirements
+pip install -r script/modules-requirements.txt
+# to addapt the script that was initially done for docker
+sed -i 's#/\./#../#g' script/modules-requirements.txt
+# to keep custom version of django-appscheduler working 
+pip install "setuptools<81"
+cd openIMIS
+# apply migration
+OPENIMIS_CONF=../openimis-dev.json python manage.py migrate
+# launch openIMIS
+OPENIMIS_CONF=../openimis-dev.json python manage.py runserver
+
+```
 ### starting docker
 
 `docker compose up --build -d `
