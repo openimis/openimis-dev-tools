@@ -1,5 +1,4 @@
 import re
-from time import sleep
 from config import GITHUB_TOKEN, RELEASE_NAME, REPOS
 from github import Github # pip install pyGithub
 from utils import *

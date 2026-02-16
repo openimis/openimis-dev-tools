@@ -1,5 +1,4 @@
 import re
-from time import sleep
 from config import GITHUB_TOKEN, RELEASE_NAME, REPOS
 from github import Github # pip install pyGithub
 from utils import flatten_json
@@ -9,7 +8,11 @@ import json
 import semantic_version # pip install semantic-version
 
 def main():
-    g =Github(GITHUB_TOKEN)
+    g = Github(
+            GITHUB_TOKEN,
+            seconds_between_requests=0.75,
+            seconds_between_writes=2.0
+    )
     release_name = RELEASE_NAME
     assembly_fe='openimis/openimis-fe_js'
     assembly_be='openimis/openimis-be_py'

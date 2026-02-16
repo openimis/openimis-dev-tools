@@ -9,7 +9,7 @@ services:
       file: compose-version.yml
   frontend:
     extends:
-      service: frontend-prod
+      service: frontend-dev
       file: compose-version.yml
   db:
     image: ghcr.io/openimis/openimis-pgsql:${DB_TAG:-develop}

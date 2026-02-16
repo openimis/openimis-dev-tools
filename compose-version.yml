@@ -37,7 +37,7 @@ services:
     volumes:
       - ./backend-packages:/backend-packages
       - ./backend:/openimis-be
-      - pip-cache:/pip-cache:rw
+#      - pip-cache:/pip-cache:rw
       - venv:/venv:rw
     profiles:
       - migrations
@@ -56,7 +56,7 @@ services:
   backend-proxy:
     image: nginx:alpine
     volumes:
-      - ./proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./proxy:/etc/nginx
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"

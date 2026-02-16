@@ -1,5 +1,4 @@
 import re
-from time import sleep
 from config import  RELEASE_NAME
 from utils import for_repos, get_repos_name
 from github import Github, PaginatedList # pip install pyGithub
@@ -43,7 +42,6 @@ def create_release(repo,branches, from_branch, to_branch):
         
         repo.create_git_tag_and_release(v, body, v, body, head_commit.sha, 'commit')
         return({ 'version': v })
-        sleep(TIMER)
     else:
         print("no changes: module {} version: {}".format(repo.name, latest_release_tag))
         return({'version': latest_release_tag })

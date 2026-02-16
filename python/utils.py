@@ -1,6 +1,5 @@
 import urllib.request
 import re
-from time import sleep
 from config import GITHUB_TOKEN, TIMER,  RELEASE_NAME
 
 from github import Github, PaginatedList
@@ -47,7 +46,6 @@ def create_pr(repo,from_branch,to_branch):
             diff_str = page.read()
             if '@@' in  str(diff_str):
                 print("PR created between  {} and  {}  for repo {}".format(from_branch,to_branch, repo.name))
-                sleep(TIMER)
                 pr = repo.create_pull(title=title, body=title, head=from_branch, base=to_branch, draft=True)
                 return pr.number
             else:
@@ -101,7 +99,11 @@ def parse_npm_branch(npm_str):
 
 
 def get_repos_name(ref_branch = 'develop'):
-    g =Github(GITHUB_TOKEN)
+    g = Github(
+            GITHUB_TOKEN,
+            seconds_between_requests=0.75,
+            seconds_between_writes=2.0
+        )
     repos_name = [] 
     assembly_fe='openimis/openimis-fe_js'
     assembly_be='openimis/openimis-be_py'
@@ -183,7 +185,11 @@ def flatten_json(y):
             
 def for_repos(repos_name,from_branch, to_branch, callback):
     output = []
-    g =Github(GITHUB_TOKEN)
+    g = Github(
+            GITHUB_TOKEN,
+            seconds_between_requests=0.75,
+            seconds_between_writes=2.0
+    )
     for repo_name in repos_name:
         repo = g.get_repo(repo_name)
         branches = [x.name for x in list(repo.get_branches())]
