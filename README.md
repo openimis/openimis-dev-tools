@@ -2,14 +2,30 @@
 
 This repository group tools for developers to initialize and develop the openIMIS system. 
 
+## Requirements
+
+- Python 3.x
+- GitPython (`pip install GitPython`)
+- PyGithub (`pip install PyGithub`)
+- Valid GitHub token with repo access permissions
+
 ## Development setting
 
-### cloning with frontend and backend
+### Cloning with frontend and backend
 
 `git clone --recurse-submodules https://github.com/openimis/openimis-dev-tools.git`
 
-### download the packages
-```
+### Configuration
+
+Edit `python/config.py` to set:
+- `GITHUB_TOKEN`: GitHub personal access token for API access
+- `USER_NAME`: Your GitHub username
+- `BRANCH`: Default branch to checkout (e.g., 'develop', 'release/25.10')
+- `TIMER`: Delay between API calls to avoid rate limits
+
+### Download the packages
+```bash
+cd openimis-dev-tools
 pip install -r requirements.txt
 python python/setup-local-dev.py
 ``` 
@@ -36,22 +52,10 @@ python setup-local-dev.py CoreMIS
 3. Generates `backend/openimis-dev.json` and `frontend/openimis-dev.json` with local module paths
 4. Backend modules are cloned to `backend-packages/`, frontend modules to `frontend-packages/`
 
-**Configuration:**
-Edit `python/config.py` to set:
-- `GITHUB_TOKEN`: GitHub personal access token for API access
-- `USER_NAME`: Your GitHub username
-- `BRANCH`: Default branch to checkout (e.g., 'develop', 'release/25.10')
-- `TIMER`: Delay between API calls to avoid rate limits
 
-**Requirements:**
-- Python 3.x
-- GitPython (`pip install GitPython`)
-- PyGithub (`pip install PyGithub`)
-- Valid GitHub token with repo access permissions
+### Developing locally
 
-### developing locally
-
-#### frontend
+#### Run the Frontend locally
 ```bash
 cd frontend
 # install all modules
@@ -62,13 +66,11 @@ npm run load-config -c ./openimis.json
 npm  install --include=dev --legacy-peer-deps
 # run app (need backend up or error 500)
 npm run start
-
-
 ```
 
-#### backend 
+#### Run the Backend locally 
  
-PYTHON 3.11 or 3.12 recommended, 3.14 DOES NOT WORK
+PYTHON 3.11 or 3.12 recommended, 3.14 DOES NOT WORK!!!
 
 ```bash
 cd backend
@@ -89,7 +91,7 @@ OPENIMIS_CONF=../openimis-dev.json python manage.py migrate
 OPENIMIS_CONF=../openimis-dev.json python manage.py runserver
 
 ```
-### starting docker
+### Starting docker
 
 `docker compose up --build -d `
 
@@ -127,7 +129,7 @@ The backend containers (migrations, backend-dev, backend-debug) now use a shared
 
 ## Python tools
 
-### config file
+### Config file
 ```
 #person tocken
 GITHUB_TOKEN=
@@ -143,32 +145,32 @@ TIMER=5
 
 ### gh-check-release-branch
 
- check if there is an existing branch
+ Check if there is an existing branch
 
  ### gh-create-release-branch
 
- create the release bracn from develop
+ Create the release bracn from develop
 
 ### gh-get-translations
 
-get FE translation
+Get FE translation
 
 ### gh-make-release
 
-create github, pip and npm release packages
+Create github, pip and npm release packages
 
 
 ### gh-pr-develop-to-release
 
-create PR to merge dev to release
+Create PR to merge dev to release
 
 ### gh-pr-release-to-main
 
-create PR to merge release to main
+Create PR to merge release to main
 
 ### make-links
 
-create docs
+Create docs
 
 ## Initializing modular openIMIS
 
