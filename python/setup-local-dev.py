@@ -6,7 +6,7 @@ from config import (
     BRANCH_SOL,
     MODE
 )
-from utils import parse_pip, walk_config_be, walk_config_fe
+from utils import parse_pip, walk_config_be, walk_config_fe, get_module_path
 import os
 import json
 import git  # pip install GitPython
@@ -90,11 +90,13 @@ def get_remote(repo, mode = None):
 
 def clone_repo_be(repo, module_name, ref='develop'):
     details = clone_repo(repo, module_name, ref='develop', root_path="./backend-packages")
-    return {"name": f"{details['name']}", "pip": f"-e file:/{details['rootPath']}/{details['name']}"}
+    module_path = get_module_path(details['name'], "./backend-packages", "./backend/openimis.json")
+    return {"name": f"{details['name']}", "pip": f"-e file:{module_path}"}
 
 def clone_repo_fe(repo, module_name, ref='develop'):
     details =  clone_repo(repo, module_name, ref='develop', root_path="./frontend-packages")
-    return {"name": f"{details['name']}", "npm": f"file:/{details['rootPath']}/{details['name']}"}
+    module_path = get_module_path(details['name'], "./frontend-packages", "./frontend/openimis.json")
+    return {"name": f"{details['name']}", "npm": f"file:{module_path}"}
 
 
 def clone_repo(repo, module_name, ref='develop', root_path="../"):

@@ -1,9 +1,26 @@
 import urllib.request
 import re
-from config import GITHUB_TOKEN, TIMER,  RELEASE_NAME
+import os
+from config import GITHUB_TOKEN, TIMER, RELEASE_NAME, REPOS
 
 from github import Github, PaginatedList
 import json
+
+# Path style constants for local development setup
+PATH_STYLE = 'DOCKER'  # Options: 'RELATIVE', 'FULL', 'DOCKER'
+BASE_PATH = '/mnt/data/Development/openimis-dev-tools'
+
+def get_module_path(name, modules_install_path, imis_json_path):
+    """Get module path based on style for local development setup"""
+    relative_path = os.path.relpath(modules_install_path, os.path.dirname(imis_json_path))
+    if PATH_STYLE == 'RELATIVE':
+        return os.path.join(relative_path, name)
+    elif PATH_STYLE == 'FULL':
+        return os.path.join(BASE_PATH, 'frontend-packages', name)
+    elif PATH_STYLE == 'DOCKER':
+        return os.path.join('/frontend-packages', name)
+    else:
+        return os.path.join(modules_install_path, name)
 
 
 
@@ -134,6 +151,9 @@ def walk_config_be(g,be, callback):
     for module in be['modules']:
         module_name = parse_pip(module['pip'])
         if module_name is not None:
+            if REPOS and module_name not in REPOS:
+                print(f"Skipping {module_name} - not in REPOS list")
+                continue
             repo = g.get_repo(module_name)
             ref = parse_pip_branch(module['pip'])
             if ref in [b.name for b in list(repo.get_branches())]:
@@ -146,12 +166,17 @@ def walk_config_be(g,be, callback):
     return res
 def walk_config_fe(g,fe, callback):
     res = []
-    
+
     for module in fe['modules']:
         module_name = parse_npm(module['npm'])
         if 'file:' in module['npm']:
             pass
         elif module_name is not None:
+            # Check if REPOS is not empty and module_name is in REPOS
+            if REPOS and module_name not in REPOS:
+                print(f"Skipping {module_name} - not in REPOS list")
+                continue
+
             repo_url = parse_npm_github(module['npm'])
             if repo_url:
                 repo = g.get_repo(repo_url)
@@ -162,7 +187,7 @@ def walk_config_fe(g,fe, callback):
                     r = callback(repo, module['name'])
                 if r is not None:
                     res.append(r)
-                
+
     return res
  
 def flatten_json(y):
