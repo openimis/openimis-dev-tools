@@ -1,94 +1,175 @@
-# openIMIS Development Tools
+# OpenIMIS Development Tools
 
-This repository group tools for developers to initialize and develop the openIMIS system. 
+This repository provides tools and scripts to help developers set up and work on the openIMIS system, a modular social protection management information system.
 
-## Development setting
+## Quick Start for New Developers
 
-### cloning with frontend and backend
+### Prerequisites
 
-`git clone --recurse-submodules https://github.com/openimis/openimis-dev-tools.git`
+Before you begin, ensure you have the following installed:
 
-### download the packages
+- **Python 3.11 or 3.12** (3.14 is not supported)
+- **Git** with SSH access to GitHub
+- **Node.js** (for frontend development)
+- **Docker and Docker Compose** (for containerized development)
+- **GitHub Personal Access Token** with `repo` permissions
+
+### Step 1: Clone the Repository
+
+```bash
+git clone --recurse-submodules https://github.com/openimis/openimis-dev-tools.git
+cd openimis-dev-tools
 ```
+
+### Step 2: Install Python Dependencies
+
+```bash
 pip install -r requirements.txt
+```
+
+### Step 3: Configure Your Environment
+
+#### Create GitHub Personal Access Token
+
+You need a GitHub Personal Access Token to access OpenIMIS repositories:
+
+1. Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
+2. Click "Generate new token (classic)"
+3. Give it a descriptive name (e.g., "openIMIS Development")
+4. Select the `repo` scope (full control of private repositories)
+5. Click "Generate token"
+6. **Copy the token immediately** - you won't be able to see it again!
+
+#### Configure config.py
+
+Edit `python/config.py` with your settings:
+
+```python
+# Your GitHub personal access token
+GITHUB_TOKEN = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Your GitHub username
+USER_NAME = "your-github-username"
+
+# Default branch to checkout
+BRANCH = "develop"
+
+# Delay between API calls (increase if you hit rate limits)
+TIMER = 5
+
+# Connection mode: 'ssh' or 'https'
+MODE = 'ssh'
+```
+
+**Important:** Keep your token secure and never commit it to version control.
+
+### Step 4: Set Up Development Environment
+
+#### Option A: Automated Setup (Recommended)
+
+```bash
 python python/setup-local-dev.py
-``` 
-
-**Basic usage:**
-```bash
-python setup-local-dev.py
 ```
 
-**With a solution name:**
-```bash
-python setup-local-dev.py CoreMIS
-```
+This will:
+- Clone all OpenIMIS backend and frontend modules
+- Set up local development configurations
+- Generate `backend/openimis-dev.json` and `frontend/openimis-dev.json`
 
-**Parameters:**
-- `SOLUTION` (optional): Name of a solution from the `openimis/solutions` repository. If provided, loads BE and FE configurations from the solutions repo. If not provided, uses local `backend/openimis.json` and `frontend/openimis.json` files.
-- `MODE` (optional, second argument): Connection mode for Git operations. Options:
-  - `ssh` (default): Uses SSH URLs for cloning
-  - Other modes use HTTPS with GitHub token authentication
+#### Option B: Manual Setup
 
-**What it does:**
-1. Loads backend and frontend module configurations
-2. Clones or updates each module repository to the appropriate branch
-3. Generates `backend/openimis-dev.json` and `frontend/openimis-dev.json` with local module paths
-4. Backend modules are cloned to `backend-packages/`, frontend modules to `frontend-packages/`
+If you prefer more control, follow the detailed setup guides below.
 
-**Configuration:**
-Edit `python/config.py` to set:
-- `GITHUB_TOKEN`: GitHub personal access token for API access
-- `USER_NAME`: Your GitHub username
-- `BRANCH`: Default branch to checkout (e.g., 'develop', 'release/25.10')
-- `TIMER`: Delay between API calls to avoid rate limits
+### Step 5: Start Developing
 
-**Requirements:**
-- Python 3.x
-- GitPython (`pip install GitPython`)
-- PyGithub (`pip install PyGithub`)
-- Valid GitHub token with repo access permissions
+Choose your development approach:
 
-### developing locally
+- **Docker Development** (easiest): Use Docker Compose for isolated development
+- **Local Development** (advanced): Set up services directly on your machine
 
-#### frontend
+## Detailed Configuration
+
+### Understanding config.py Variables
+
+The `python/config.py` file contains several important settings:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `GITHUB_TOKEN` | Your GitHub personal access token | `"ghp_xxx..."` |
+| `USER_NAME` | Your GitHub username | `"johndoe"` |
+| `BRANCH` | Default branch for checkouts | `"develop"` |
+| `BRANCH_SOL` | Solutions repository branch | `"develop"` |
+| `BRANCH_FE` | Frontend modules branch | `"develop"` |
+| `BRANCH_BE` | Backend modules branch | `"develop"` |
+| `RELEASE_NAME` | Release branch name | `"release/25.10"` |
+| `REPOS` | Specific repositories to work with | `['core', 'CoreModule']` |
+| `MODE` | Git connection mode | `'ssh'` or `'https'` |
+| `TIMER` | API rate limiting delay (seconds) | `5` |
+
+### Understanding "Locks" in OpenIMIS
+
+OpenIMIS uses version constraints to ensure compatibility:
+
+#### Version Locks in Dependencies
+Some packages have strict version requirements due to compatibility issues:
+- `setuptools<81` - Required for django-appscheduler compatibility
+- Specific Python version requirements (3.11/3.12, not 3.14)
+
+#### Lock Files
+The project uses lock files to ensure reproducible builds:
+- `requirements.txt` - Python dependencies
+- `package-lock.json` - Node.js dependencies
+- `openimis-dev.lock` - Module-specific requirements
+
+These locks prevent unexpected updates that could break the system.
+
+## Development Setup Options
+
+### Local Development (Advanced)
+
+If you prefer to run services directly on your machine instead of using Docker:
+
+#### Frontend Setup
+
 ```bash
 cd frontend
-# install all modules
-node dev_tools/entrypoint-dev.js 
-# load the module in assembly
+# Install all modules
+node dev_tools/entrypoint-dev.js
+# Load module configuration
 npm run load-config -c ./openimis.json
-# install node packages
-npm  install --include=dev --legacy-peer-deps
-# run app (need backend up or error 500)
+# Install dependencies (use legacy peer deps to avoid conflicts)
+npm install --include=dev --legacy-peer-deps
+# Start development server (requires backend to be running)
 npm run start
-
-
 ```
 
-#### backend 
- 
-PYTHON 3.11 or 3.12 recommended, 3.14 DOES NOT WORK
+The frontend will be available at `http://localhost:3000`.
+
+#### Backend Setup
+
+**Important:** Use Python 3.11 or 3.12 (3.14 is not supported)
 
 ```bash
 cd backend
-# install assembly requirements
+# Install base requirements
 pip install -r requirements.txt
-# get the requirement for all modules
+# Generate module-specific requirements
 python script/modules-requirements.py ../openimis-dev.json > script/modules-requirements.txt
-# install modules requirements
+# Install module requirements
 pip install -r script/modules-requirements.txt
-# to addapt the script that was initially done for docker
+# Fix path references for local development
 sed -i 's#/\./#../#g' script/modules-requirements.txt
-# to keep custom version of django-appscheduler working 
+# Install specific setuptools version for compatibility
 pip install "setuptools<81"
+# Change to Django project directory
 cd openIMIS
-# apply migration
+# Run database migrations
 OPENIMIS_CONF=../openimis-dev.json python manage.py migrate
-# launch openIMIS
+# Start Django development server
 OPENIMIS_CONF=../openimis-dev.json python manage.py runserver
-
 ```
+
+The backend will be available at `http://localhost:8000`.
 ### starting docker
 
 `docker compose up --build -d `
@@ -125,53 +206,73 @@ The backend containers (migrations, backend-dev, backend-debug) now use a shared
 - Modules are installed into this shared environment, so once installed by one container (e.g., migrations), they are available to others.
 - If you need to clear the installed modules, remove the `venv` volume: `docker compose down -v` (this will remove all volumes).
 
-## Python tools
+## Release Management
 
-### config file
+For information about release management scripts and workflows, see [RELEASE.md](RELEASE.md).
+
+## Troubleshooting
+
+### Common Issues
+
+#### GitHub Token Issues
+- **"Bad credentials" error**: Verify your token is correct and has `repo` scope
+- **Rate limiting**: Increase `TIMER` in config.py or use a different token
+- **Permission denied**: Ensure your token has access to OpenIMIS repositories
+
+#### Python Version Issues
+- **Python 3.14 not supported**: Use Python 3.11 or 3.12
+- **Import errors**: Ensure all dependencies are installed: `pip install -r requirements.txt`
+
+#### Docker Issues
+- **Port conflicts**: Check if ports 3000 (frontend) or 8000 (backend) are in use
+- **Volume permissions**: On Linux, you may need to adjust Docker volume permissions
+- **Memory issues**: Ensure Docker has enough memory allocated (4GB recommended)
+
+#### Module Installation Issues
+- **npm install fails**: Try `npm install --legacy-peer-deps`
+- **pip install fails**: Check Python version compatibility
+- **Version conflicts**: Some packages have strict version requirements (see "Locks" section)
+
+### Getting Help
+
+- Check existing GitHub issues in the [openimis-dev-tools repository](https://github.com/openimis/openimis-dev-tools/issues)
+- Review the [OpenIMIS documentation](https://openimis.atlassian.net/wiki/spaces/OP/pages/1174401/Technical+Documentation)
+- Join the [OpenIMIS community forum](https://openimis.org/community/)
+
+### Development Tips
+
+- Use the automated setup script for first-time setup
+- Keep your GitHub token secure and rotate it regularly
+- Use Docker for isolated development to avoid conflicts
+- Test changes across both frontend and backend
+- Follow the modular architecture when adding new features
+
+## Project Structure
+
+After running the setup script, your directory structure will look like this:
+
 ```
-#person tocken
-GITHUB_TOKEN=
-#deprecated: list of module to take care of; now all module from openimis.json in the develop assembly are in
-REPOS =  []
-#name of the branche to create/chec ... 
-RELEASE_NAME='release/23.04'
-#to avoid too many request (Github block if not)
-TIMER=5
+openimis-dev-tools/
+├── backend/                 # Django backend application
+│   ├── openIMIS/           # Main Django project
+│   └── openimis-dev.json   # Local backend configuration
+├── backend-packages/       # Cloned backend modules
+├── frontend/               # React frontend application
+│   └── openimis-dev.json   # Local frontend configuration
+├── frontend-packages/      # Cloned frontend modules
+├── python/                 # Development and release scripts
+├── RELEASE.md              # Release management documentation
+└── compose.yml            # Docker Compose configuration
 ```
 
+## Contributing
 
+We welcome contributions to OpenIMIS! Please:
 
-### gh-check-release-branch
+1. Fork the repository
+2. Create a feature branch from `develop`
+3. Make your changes
+4. Test thoroughly across frontend and backend
+5. Submit a pull request
 
- check if there is an existing branch
-
- ### gh-create-release-branch
-
- create the release bracn from develop
-
-### gh-get-translations
-
-get FE translation
-
-### gh-make-release
-
-create github, pip and npm release packages
-
-
-### gh-pr-develop-to-release
-
-create PR to merge dev to release
-
-### gh-pr-release-to-main
-
-create PR to merge release to main
-
-### make-links
-
-create docs
-
-## Initializing modular openIMIS
-
-First you need to install or access the legacy openIMIS (at least the DB for the BE).
-
-Make sure you have python installed in your computer and the python command is accessible (python bin folder is in PATH).
+For more information, see the [OpenIMIS contribution guidelines](https://github.com/openimis/openimis-be_py/blob/develop/CONTRIBUTING.md).
