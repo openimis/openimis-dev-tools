@@ -18,37 +18,37 @@ if len(sys.argv) > 2:
 SOLUTION = None
 
 
-def load_solution_configs(g, solutions, SOLUTION, BRANCH_BE):
+def load_solution_configs(g, solutions, SOLUTION, branch):
     # Initialize repository
     repo = g.get_repo(solutions)
-    
+
     # Get list of directories at the root of the repository
-    contents = repo.get_contents("", ref=BRANCH_SOL)
-    
+    contents = repo.get_contents("", ref=branch)
+
     # Find directory matching SOLUTION (case-insensitive)
     dir_solution = None
     for content in contents:
         if content.type == "dir" and content.name.lower() == SOLUTION.lower():
             dir_solution = content.name
             break
-    
+
     if not dir_solution:
-        raise ValueError(f"No directory matching '{SOLUTION}' found in repository {solutions} at ref {BRANCH_BE}")
-    
+        raise ValueError(f"No directory matching '{SOLUTION}' found in repository {solutions} at ref {branch}")
+
     # Load be-openimis.json
     try:
-        be_content = repo.get_contents(f"{dir_solution}/be-openimis.json", ref=BRANCH_BE)
+        be_content = repo.get_contents(f"{dir_solution}/be-openimis.json", ref=branch)
         be = json.loads(be_content.decoded_content)
     except Exception as e:
         raise ValueError(f"Failed to load {dir_solution}/be-openimis.json: {str(e)}")
-    
+
     # Load fe-openimis.json
     try:
-        fe_content = repo.get_contents(f"{dir_solution}/fe-openimis.json", ref=BRANCH_FE)
+        fe_content = repo.get_contents(f"{dir_solution}/fe-openimis.json", ref=branch)
         fe = json.loads(fe_content.decoded_content)
     except Exception as e:
         raise ValueError(f"Failed to load {dir_solution}/fe-openimis.json: {str(e)}")
-    
+
     return be, fe
 
 def main():
@@ -88,13 +88,13 @@ def get_remote(repo, mode = None):
         remote = f"https://{repo.git_url[6:]}"
     return remote
 
-def clone_repo_be(repo, module_name, ref='develop'):
-    details = clone_repo(repo, module_name, ref='develop', root_path="./backend-packages")
+def clone_repo_be(repo, module_name, ref=BRANCH_BE):
+    details = clone_repo(repo, module_name, ref=ref, root_path="./backend-packages")
     module_path = get_module_path(details['name'], "./backend-packages", "./backend/openimis.json")
     return {"name": f"{details['name']}", "pip": f"-e file:{module_path}"}
 
-def clone_repo_fe(repo, module_name, ref='develop'):
-    details =  clone_repo(repo, module_name, ref='develop', root_path="./frontend-packages")
+def clone_repo_fe(repo, module_name, ref=BRANCH_FE):
+    details =  clone_repo(repo, module_name, ref=ref, root_path="./frontend-packages")
     module_path = get_module_path(details['name'], "./frontend-packages", "./frontend/openimis.json")
     return {"name": f"{details['name']}", "npm": f"file:{module_path}"}
 
@@ -108,6 +108,8 @@ def clone_repo(repo, module_name, ref='develop', root_path="../"):
         repo_git = git.Repo(path)
         try:
             repo_git.remotes.origin.fetch(ref)
+            if repo_git.is_dirty():
+                repo_git.git.stash()
             repo_git.git.checkout(ref)
             repo_git.remotes.origin.pull()
             print(f"{module_name} pulled and checked out")

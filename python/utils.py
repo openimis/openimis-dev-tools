@@ -151,8 +151,9 @@ def walk_config_be(g,be, callback):
     for module in be['modules']:
         module_name = parse_pip(module['pip'])
         if module_name is not None:
-            if REPOS and module_name not in REPOS:
-                print(f"Skipping {module_name} - not in REPOS list")
+            if REPOS and module['name'] not in REPOS:
+                print(f"Using original definition for {module['name']} - not in REPOS list")
+                res.append(module)
                 continue
             repo = g.get_repo(module_name)
             ref = parse_pip_branch(module['pip'])
@@ -162,7 +163,7 @@ def walk_config_be(g,be, callback):
                 r = callback(repo, module['name'])
             if r is not None:
                 res.append(r)
-                
+
     return res
 def walk_config_fe(g,fe, callback):
     res = []
@@ -170,11 +171,12 @@ def walk_config_fe(g,fe, callback):
     for module in fe['modules']:
         module_name = parse_npm(module['npm'])
         if 'file:' in module['npm']:
-            pass
+            res.append(module)
         elif module_name is not None:
             # Check if REPOS is not empty and module_name is in REPOS
-            if REPOS and module_name not in REPOS:
-                print(f"Skipping {module_name} - not in REPOS list")
+            if REPOS and  module['name'] not in REPOS:
+                print(f"Using original definition for {module['name']} - not in REPOS list")
+                res.append(module)
                 continue
 
             repo_url = parse_npm_github(module['npm'])
