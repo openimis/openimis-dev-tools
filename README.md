@@ -8,7 +8,7 @@ This repository provides tools and scripts to help developers set up and work on
 
 Before you begin, ensure you have the following installed:
 
-- **Python 3.11 or 3.12** (3.14 is not supported)
+- **Python 3.11** (3.14 is not supported, recent dependency update broke compatibility with python 3.12)
 - **Git** with SSH access to GitHub
 - **Node.js** (for frontend development)
 - **Docker and Docker Compose** (for containerized development)
@@ -54,10 +54,9 @@ USER_NAME = "your-github-username"
 # Default branch to checkout
 BRANCH = "develop"
 
-# Delay between API calls (increase if you hit rate limits)
-TIMER = 5
-
 # Connection mode: 'ssh' or 'https'
+# ssh has stronger security and make sending back change on github easier
+# one need to add his local public key on github
 MODE = 'ssh'
 ```
 
@@ -104,7 +103,7 @@ The `python/config.py` file contains several important settings:
 | `RELEASE_NAME` | Release branch name | `"release/25.10"` |
 | `REPOS` | Specific repositories to work with | `['core', 'CoreModule']` |
 | `MODE` | Git connection mode | `'ssh'` or `'https'` |
-| `TIMER` | API rate limiting delay (seconds) | `5` |
+
 
 ### Understanding "Locks" in OpenIMIS
 
@@ -113,7 +112,7 @@ OpenIMIS uses version constraints to ensure compatibility:
 #### Version Locks in Dependencies
 Some packages have strict version requirements due to compatibility issues:
 - `setuptools<81` - Required for django-appscheduler compatibility
-- Specific Python version requirements (3.11/3.12, not 3.14)
+- Specific Python version requirements (3.11, not 3.14)
 
 #### Lock Files
 The project uses lock files to ensure reproducible builds:
@@ -134,9 +133,9 @@ If you prefer to run services directly on your machine instead of using Docker:
 ```bash
 cd frontend
 # Install all modules
-node dev_tools/entrypoint-dev.js
+node dev_tools/entrypoint-dev.js -c ./openimis-dev.json
 # Load module configuration
-npm run load-config -c ./openimis.json
+npm run load-config -c ./openimis-dev.json
 # Install dependencies (use legacy peer deps to avoid conflicts)
 npm install --include=dev --legacy-peer-deps
 # Start development server (requires backend to be running)
@@ -182,7 +181,7 @@ The main `compose.yml` file uses Docker Compose's `extends` feature to reference
 - `compose-version.yml`: Contains detailed service configurations for backend, frontend, and database services in different modes (dev, prod, debug).
 
 To run specific services, use profiles or service names. For example:
-- `docker compose --profile migrations up migrations` - Run only migrations
+- `docker compose up migrations` - Run only migrations, not run by default
 - `docker compose up backend frontend` - Run specific services
 
 #### Available Services
@@ -214,13 +213,17 @@ For information about release management scripts and workflows, see [RELEASE.md]
 
 ### Common Issues
 
+### reverse proxy Issues
+
+- **frontend dev mode** vite is managing the reverse proxy, one need to change the backend `/api` target in frontend/vite.config.js
+- **frontend prod mode** nginx is managing the reverse proxy, one need to update the nginx `/api` location to targer the backend
+
 #### GitHub Token Issues
 - **"Bad credentials" error**: Verify your token is correct and has `repo` scope
-- **Rate limiting**: Increase `TIMER` in config.py or use a different token
 - **Permission denied**: Ensure your token has access to OpenIMIS repositories
 
 #### Python Version Issues
-- **Python 3.14 not supported**: Use Python 3.11 or 3.12
+- **Python 3.14 not supported**: Use Python 3.11 
 - **Import errors**: Ensure all dependencies are installed: `pip install -r requirements.txt`
 
 #### Docker Issues
