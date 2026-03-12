@@ -40,5 +40,5 @@ if __name__ == '__main__':
     
     print("FE config")
     print_fe_git_table(output)
-    print_fe_pip_table(output)
+    print_fe_npm_table(output)
 
