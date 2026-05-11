@@ -19,13 +19,13 @@ def create_release(repo,branches, from_branch, to_branch):
     head_commit = repo.get_branch(from_branch).commit
     if len(release)>0:
         latest_release_tag = repo.get_latest_release().tag_name
+        print(f"creating release tag for {repo} which is currently on {latest_release_tag}")
         release_commit = list(filter(lambda x: x.name==latest_release_tag, repo.get_tags()))[0].commit
         diff = repo.compare( head = head_commit.sha, base=release_commit.sha)
         nb_commit = diff.commits.totalCount if isinstance(diff.commits, PaginatedList.PaginatedList) else len(diff.commits)
         if latest_release_tag.startswith('v'):
             latest_release_tag =latest_release_tag[1:]
-        if len(latest_release_tag)>5:
-            latest_release_tag =latest_release_tag[:5]
+        
         if nb_commit > 1:
             v = "v"+str(semantic_version.Version(latest_release_tag).next_minor())
             print("new minor: module {} version {}".format(repo.name, str(v)))
