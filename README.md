@@ -58,10 +58,14 @@ python setup-local-dev.py CoreMIS
 ### Run the Frontend locally
 ```bash
 cd frontend
+# install assembly dependancies
+npm install --legacy-peer-deps
+# normalize the openimis-dev.json file initially done for docker
+sed -i 's#file:/\./#file:../#g' openimis-dev.json
 # install all modules
-node dev_tools/entrypoint-dev.js 
+node dev_tools/entrypoint-dev.js -c ./openimis-dev.json
 # load the module in assembly
-npm run load-config -c ./openimis.json
+npm run load-config -- ./openimis.json
 # install node packages
 npm  install --include=dev --legacy-peer-deps
 # run app (need backend up or error 500)
@@ -78,10 +82,10 @@ cd backend
 pip install -r requirements.txt
 # get the requirement for all modules
 python script/modules-requirements.py ../openimis-dev.json > script/modules-requirements.txt
-# install modules requirements
-pip install -r script/modules-requirements.txt
 # to addapt the script that was initially done for docker
 sed -i 's#/\./#../#g' script/modules-requirements.txt
+# install modules requirements
+pip install -r script/modules-requirements.txt
 # to keep custom version of django-appscheduler working 
 pip install "setuptools<81"
 cd openIMIS
