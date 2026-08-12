@@ -89,12 +89,12 @@ def get_remote(repo, mode = None):
     return remote
 
 def clone_repo_be(repo, module_name, ref='develop'):
-    details = clone_repo(repo, module_name, ref='develop', root_path="./backend-packages")
-    return {"name": f"{details['name']}", "pip": f"-e file:/{details['rootPath']}/{details['name']}"}
+      details = clone_repo(repo, module_name, ref=ref, root_path="./backend-packages")
+      return {"name": f"{details['name']}", "pip": f"-e file:/{details['rootPath']}/{details['name']}"}
 
 def clone_repo_fe(repo, module_name, ref='develop'):
-    details =  clone_repo(repo, module_name, ref='develop', root_path="./frontend-packages")
-    return {"name": f"{details['name']}", "npm": f"file:/{details['rootPath']}/{details['name']}"}
+      details = clone_repo(repo, module_name, ref=ref, root_path="./frontend-packages")
+      return {"name": f"{details['name']}", "npm": f"file:/{details['rootPath']}/{details['name']}"}
 
 
 def clone_repo(repo, module_name, ref='develop', root_path="../"):
