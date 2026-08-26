@@ -7,7 +7,7 @@ from github import Github, PaginatedList
 import json
 
 # Path style constants for local development setup
-PATH_STYLE = 'DOCKER'  # Options: 'RELATIVE', 'FULL', 'DOCKER'
+PATH_STYLE = 'FULL'  # Options: 'RELATIVE', 'FULL', 'DOCKER'
 BASE_PATH = '/mnt/data/Development/openimis-dev-tools'
 
 def get_module_path(name, modules_install_path, imis_json_path):
@@ -231,6 +231,7 @@ def get_config(repo, branches, source_branch, target_branch):
     config = {}
     config['git'] = repo.git_url
     config['url'] = repo.html_url
+    config['branch'] = target_branch
     try:
         config['version'] = repo.get_latest_release().tag_name
     except:
@@ -287,9 +288,10 @@ def print_be_solution_builder(modules):
             modules_json.append(""""{0}":{{
             "package": "{1}",
             "git": "{2}",
-            "version": "{3}"
-        }}""".format(module['nickname'], module['name'],module["url"], module['version']) + "\n")
-        f.write(f"""{{"be_source_package": [{",".join(modules_json)}]}}""")
+            "version": "{3}",
+            "branch": "{4}"
+        }}\n""".format(module['nickname'], module['name'],module["url"], module['version'].replace("v",""), module['branch']))
+        f.write(f"""{{"be_source_package": {{{",".join(modules_json)}}}}}""")
 
 def print_fe_table(modules):
     with open('fe_references.txt', 'w') as f:
@@ -315,15 +317,20 @@ def print_fe_npm_table(modules):
             "npm": "{module['name']}@>={module['version']}"
         }}""" + '\n')
         f.write(f"""{{"modules": [{",".join(modules_json)}]}}""")
-def print_fe_solution_builder(modules):
+def print_fe_solution_builder(modules , branch):
     with open('source-fe.json', 'w') as f:
   
         modules_json = []
         for module in modules:
             modules_json.append(""""{0}":{{
-           "{0}Module":{{
             "package": "{1}",
             "git": "{2}",
-            "version": "{3}"
-        }}""".format(module['nickname'], module['name'],module["url"], module['version']) + '\n')
-        f.write(f"""{{"be_source_package": {{{",".join(modules_json)}]}}}}""")
+            "version": "{3}",
+            "branch": "{4}"
+        }}""".format(module['nickname'], module['name'],module["url"], module['version'], module['branch']) + '\n')
+        f.write(f"""{{"be_source_package": {{{",".join(modules_json)}}}}}""")
+        
+def get_release_version(release_name):
+    # release/26.04 -> 26.04, anything else is used as-is (e.g. develop)
+    match = re.match(r'release/([0-9]{2}\.[0-9]{2})$', release_name)
+    return match.group(1) if match else release_name

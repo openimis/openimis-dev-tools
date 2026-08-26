@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  postgres14:
+    build:
+      context: https://github.com/getodk/central.git#master
+      dockerfile: postgres14.dockerfile
+    shm_size: 512m
+    volumes:
+      - postgres14:/var/lib/odk/postgresql/14
+    environment:
+      POSTGRES_USER: odk
+      POSTGRES_PASSWORD: odk
+      POSTGRES_DB: odk
+    restart: always
+
+  postgres:
+    build:
+      context: https://github.com/getodk/central.git#master
+      dockerfile: postgres-upgrade.dockerfile
+    volumes:
+      - postgres14:/var/lib/postgresql/14
+    environment:
+      PGUSER: odk
+      POSTGRES_PASSWORD: odk
+      POSTGRES_DB: odk
+
+  mail:
+    image: "registry.gitlab.com/egos-tech/smtp:1.1.5"  # or use mailhog/mailhog for testing
+    restart: always
+
+  secrets:
+    build:
+      context: https://github.com/getodk/central.git#master
+      dockerfile: secrets.dockerfile
+    command: ./generate-secrets.sh
+
+  service:
+    build:
+      context: https://github.com/getodk/central.git#master
+      dockerfile: service.dockerfile
+    depends_on:
+      - postgres14
+      - mail
+      - secrets
+      - pyxform
+      - enketo
+    volumes:
+      - secrets:/etc/secrets
+    environment:
+      DOMAIN: localhost
+      SYSADMIN_EMAIL: admin@example.com
+      DB_HOST: postgres14
+      DB_USER: odk
+      DB_PASSWORD: odk
+      DB_NAME: odk
+      EMAIL_HOST: mail
+      EMAIL_PORT: 25
+      EMAIL_SECURE: false
+      EMAIL_IGNORE_TLS: true
+    command: ["wait-for-it", "postgres14:5432", "--", "./start-odk.sh"]
+    restart: always
+
+  nginx:
+    build:
+      context: https://github.com/getodk/central.git#master
+      dockerfile: nginx.dockerfile
+    depends_on:
+      - service
+      - enketo
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: localhost
+      SSL_TYPE: selfsign
+    restart: always
+
+  pyxform:
+    image: ghcr.io/getodk/pyxform-http:v4.2.0
+    restart: always
+
+  enketo:
+    build:
+      context: https://github.com/getodk/central.git#master
+      dockerfile: enketo.dockerfile
+    depends_on:
+      - secrets
+      - enketo_redis_main
+      - enketo_redis_cache
+    restart: always
+
+  enketo_redis_main:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - enketo_redis_main:/data
+
+  enketo_redis_cache:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - enketo_redis_cache:/data
+
+volumes:
+  postgres14:
+  secrets:
+  enketo_redis_main:
+  enketo_redis_cache:

@@ -28,8 +28,6 @@ services:
     restart: always
     ports:
       - 5432:5432
-
-
   db-mssql:
     image: ghcr.io/openimis/openimis-mssql:${DB_TAG:-develop}
     restart: always
@@ -49,7 +47,6 @@ services:
       start_period: 100s
     volumes:
       - database-mssql:/var/opt/mssql/data
-
 volumes:
   database:
   database-mssql:
