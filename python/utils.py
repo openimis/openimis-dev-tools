@@ -63,7 +63,7 @@ def create_pr(repo,from_branch,to_branch):
             diff_str = page.read()
             if '@@' in  str(diff_str):
                 print("PR created between  {} and  {}  for repo {}".format(from_branch,to_branch, repo.name))
-                pr = repo.create_pull(title=title, body=title, head=from_branch, base=to_branch, draft=True)
+                pr = repo.create_pull(title=title, body=title, head=from_branch, base=to_branch, draft=False)
                 return pr.number
             else:
                 print("no change despite commit between  {} and  {}  for repo {}".format(from_branch,to_branch, repo.name))

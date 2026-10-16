@@ -32,10 +32,14 @@ GITHUB_TOKEN = _secrets.get("GITHUB_TOKEN", os.environ.get("GITHUB_TOKEN", ""))
 USER_NAME = _secrets.get("USER_NAME", os.environ.get("USER_NAME", "delcroip"))
 
 REPOS =  []
-RELEASE_NAME='release/25.04'
+RELEASE_NAME='release/26.10'
 BRANCH_SOL='develop'
-BRANCH_FE='feature/vite-migration'
-BRANCH_BE='feature/load-demo'
+BRANCH_FE='develop'
+BRANCH_BE='develop'
 BRANCH='develop'
-MODE = 'https' # or ssh
+MODE = 'ssh'
 TIMER=5
+
+# Org that owns the canonical openIMIS repos, and the fork org to sync into.
+UPSTREAM_ORG = 'openimis'
+FORK_ORG = 'obenma'

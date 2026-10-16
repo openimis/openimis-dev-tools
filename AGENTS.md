@@ -76,6 +76,7 @@ See [README.md](README.md) for full prerequisites (Python 3.11, Node.js, Docker)
 |-------|----------|
 | Django testing, flake8, module docs, migrations | [backend/AGENTS.md](backend/AGENTS.md) |
 | Vite modules, peerDependencies, formatting, build | [frontend/AGENTS.md](frontend/AGENTS.md) |
+| fe-core conventions: theming, mutations, journalling, list feedback | [frontend-packages/CoreModule/AGENTS.md](frontend-packages/CoreModule/AGENTS.md) |
 | Docker services, env vars, release scripts | [README.md](README.md), [RELEASE.md](RELEASE.md) |
 
 ## VS Code workspaces
@@ -85,7 +86,20 @@ See [README.md](README.md) for full prerequisites (Python 3.11, Node.js, Docker)
 
 ## Key conventions
 
+- **English only, in the code** — every comment, docstring, log message, exception
+  message, test assertion message, CLI help string and identifier is written in
+  English, in both assemblies and every package. openIMIS is maintained by
+  contributors who do not share a common second language, and a French comment
+  explaining *why* a security check exists is unreadable to the reviewer who most
+  needs it. User-facing text is the one exception: it is translated through
+  `gettext`, never by writing another language into the source.
 - **Do not commit secrets** — `python/config.py`, `.env` files are local only.
 - **Branch defaults** — `develop` for modules and assemblies (configurable in `python/config.py`).
 - **Module naming** — Backend logical names use underscores (`tasks_management`); frontend module directories use PascalCase + `Module` suffix (`TasksManagementModule`).
+- **A mutation response is not a completed mutation** — `core.async_mutations` is
+  on by default in `PROD`, so an `OpenIMISMutation` is queued and the GraphQL
+  response returns once the `MutationLog` row exists, not once the work is done.
+  Code that awaits a mutation and immediately re-reads the data races the worker.
+  See [frontend-packages/CoreModule/AGENTS.md](frontend-packages/CoreModule/AGENTS.md)
+  for how the frontend handles this.
 - **Changes flow upstream** — Commits and PRs go to each module's own GitHub repo, not to `openimis-dev-tools` (except dev-tools scripts themselves).
