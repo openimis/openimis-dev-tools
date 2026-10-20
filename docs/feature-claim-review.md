@@ -239,8 +239,8 @@ link insurance to lines; this is an openIMIS extension).
   separate RFC.
 - **[Pre-authorisation and ApprovedBenefit](feature-preauth-approved-benefit.md)**:
   separate RFC, which needs this one.
-- **`ValidityMixin.replace_object` on `OpenIMISBusinessModel`**: tech debt
-  (OP-3181). Reproduced on `UserBusinessAccess`: the copy keeps the unique
+- **`ValidityMixin.replace_object` on `OpenIMISBusinessModel`**: OP-3230
+  (tech debt, OP-3181). Reproduced on `UserBusinessAccess`: the copy keeps the unique
   uuid, so the insert fails; past that, the integer `id` is written into the
   UUID field `replacement_uuid`.
 - **Grievance**: the route for facility disputes (rule 9). It references the
