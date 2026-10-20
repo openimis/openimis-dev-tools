@@ -1,9 +1,11 @@
-# Feature proposal: auditable claim review (ClaimReview, ApprovedBenefit)
+# Feature proposal: auditable claim review (split review)
 
 **Status:** draft for community discussion  
-**Modules:** `claim`, `tasks_management`, `product`, `api_fhir_r4`, a new benefit module (name TBD), `ClaimModule` (frontend)  
+**Modules:** `claim`, `tasks_management`, `api_fhir_r4`, `ClaimModule` (frontend)  
 **Audience:** openIMIS developers and implementers  
-**Related:** OP-3199 (entities with tasks)
+**Related:** OP-3199 (entities with tasks)  
+**Needed by:** [Pre-authorisation and ApprovedBenefit](feature-preauth-approved-benefit.md)  
+**See also:** [Price lists as facility agreements](feature-price-list-agreements.md)
 
 ## Summary
 
@@ -22,9 +24,6 @@ This RFC moves the review out of the claim:
 - Reviews are chained through **tasks**: one task per review, created by
   workflow rules from the previous task's result.
 - The automatic check (`claim/validations.py`) becomes the first review.
-- **Pre-authorisation** is a claim with `use = preauthorization`. Approving it
-  creates **`ApprovedBenefit`** records, which later claims use up during the
-  automatic check, before product coverage is checked.
 - The claim response (what the facility sees) is computed from the reviews. It
   is published after each review, at processing and valuation, or only at
   valuation, depending on the scheme's settings. It is final once the claim is
@@ -39,10 +38,8 @@ This RFC moves the review out of the claim:
 | Review fields on the claim and its lines | `Claim`, `ClaimItem`, `ClaimService` (`status`, `rejection_reason`, `price_approved`, `price_adjusted`, `price_valuated`, `qty_approved`, `explanation`, `justification`, `adjustment`, `feedback_status`, `review_status`, `audit_user_id_review`, …) | One value per field: each review overwrites the last, and there is no reviewer per decision. |
 | Automatic check | `claim/validations.py`: rejection reasons 1–21, plus processing (deductibles, ceilings, remunerated amounts) | Writes into the same fields as the human reviews. |
 | Readers of those fields | `claim`, `claim_sampling`, `claim_batch`, `calcrule_third_party_payment`, `calcrule_capitation_payment`, `api_fhir_r4`, `dhis2_etl`, `policy` | Any change to the fields affects 8 modules. |
-| Pre-authorisation | `Claim.pre_authorization` boolean (`claim/models.py:267`) | Only set and filtered on. No logic uses it, and products have no "needs pre-authorisation" setting. |
 | Claim history | `Claim` is a `VersionedModel` (history rows with `legacy_id`) | That is an audit mechanism, not business versions. A claim sent back to the facility cannot keep the reviews of its earlier version. |
 | Line identity | `ClaimItem` / `ClaimService` have only a numeric id | Lines are closed and recreated when a claim is amended, so the id is not a stable reference. |
-| Benefit tracking | `ClaimDedRem` (`claim/models.py:820`), with fixed columns `ded_g/op/ip`, `rem_g/op/ip` | The categories are fixed in the columns, so new kinds of benefit cannot be tracked. |
 
 ## 2. Goals and non-goals
 
@@ -54,16 +51,14 @@ This RFC moves the review out of the claim:
   allows it, and can dispute a decision through the grievance process.
 - Claims can be returned to the facility and resubmitted without losing the
   earlier reviews.
-- Pre-authorisation, and the `ApprovedBenefit` it produces.
 - An outward model that maps directly to FHIR `ClaimResponse`.
 
-**Non-goals** (each is a separate RFC; see section 10)
+**Non-goals** (each is a separate RFC; see section 9)
 
 - Merging `ClaimItem` and `ClaimService` into one table.
-- Price lists as agreements with validity dates and product scope.
-- "Rights": benefits that recur over time (pensions, sickness compensation).
-- Replacing `ClaimDedRem`.
-- Medical justification for pre-authorisation (a prescription, for example).
+- Price lists as facility agreements: [separate RFC](feature-price-list-agreements.md).
+- Pre-authorisation and `ApprovedBenefit`: [separate RFC](feature-preauth-approved-benefit.md),
+  which builds on this one.
 - `addItem` (items added by the payer). The model reserves a place for it, but
   it is not implemented.
 
@@ -83,7 +78,7 @@ it judged, even after the claim is amended.
   `unique=True` (`core/models/openimis_model.py:217`), so two versions cannot
   share one. `ValidityMixin.replace_object` also looks written for
   `HistoryBusinessModel` (whose primary key is a UUID) and needs fixing before
-  the claim can use it (see section 10). Until the claim moves to the new
+  the claim can use it (see section 9). Until the claim moves to the new
   model, `claim_version` is kept on the existing claim.
 - **Line.** Each `ClaimItem` / `ClaimService` gets a **`line_ref`** (a UUID). It
   is assigned at submission, copied to the line's later versions, and never
@@ -215,53 +210,7 @@ link insurance to lines; this is an openIMIS extension).
   value 32, following the existing 1, 2, 4, 8, 16). The facility resubmits as a
   new claim version (rule 6).
 
-## 7. Pre-authorisation and `ApprovedBenefit`
-
-- **`Claim.use`**: `claim` | `preauthorization` | `predetermination`, as in
-  FHIR. It replaces the `pre_authorization` boolean (`true` is migrated to
-  `preauthorization`). On FHIR it is the `use` field. GraphQL gets separate
-  mutations.
-- **Product setting:** product item/service coverage gets a **"needs
-  pre-authorisation"** flag. It is a coverage rule, so it belongs on the
-  product, not on the price list.
-- A pre-authorisation is reviewed like any claim. When it is final, every
-  approved line creates an **`ApprovedBenefit`**:
-
-  | Field | Notes |
-  |---|---|
-  | insuree, product | Product, not policy (see validity below). |
-  | `line_content_type`, item/service | What was approved. |
-  | quantity, unit price / amount | As approved. |
-  | `valid_from`, `valid_to` | From the target date that the pre-authorisation can carry (future-dated care). |
-  | source review, `line_ref` | Where the benefit came from. |
-
-- **Uses**: one row per claim line that uses the benefit, with quantity,
-  amount and status:
-  - **reserved** when the claim is checked;
-  - **confirmed** when the claim is final;
-  - **released** if the line is later rejected or the claim is returned.
-
-  The benefit is locked while a use is reserved, so two claims cannot both take
-  the last unit.
-- **Automatic check:** it first uses up a matching `ApprovedBenefit` (same
-  insuree, item, product, within validity), then checks product coverage. A line
-  that needs pre-authorisation and has no `ApprovedBenefit` is rejected with a
-  **new reason code** (22 onwards). The automatic check only ever uses
-  `ApprovedBenefit`. When the real claim is the next version of the
-  pre-authorisation, that link is kept for history and display only.
-- **Validity:** nothing carries over. When the claim is checked, the insuree
-  must hold an active policy **with the same product** on the date of service.
-  The policy may be a renewal; the renewal flag is not relied on.
-- **Processing:** a line covered by an `ApprovedBenefit` is priced at the
-  approved price instead of the price list. Deductibles and ceilings still
-  apply, because the product defines them.
-- **Where it lives:** a new `benefit` module, because openIMIS is a
-  benefit management system and other areas will need it. Payroll's
-  `BenefitConsumption` (`payroll/models.py:111`) is not reused: it is a payment
-  to an `Individual` (receipt, due date, amount), not an entitlement to care,
-  and moving it would affect 5 modules.
-
-## 8. Migration and rollout
+## 7. Migration and rollout
 
 | Step | What | Rollback |
 |---|---|---|
@@ -269,7 +218,7 @@ link insurance to lines; this is an openIMIS extension).
 | **B. Country migration** | A management command builds reviews from historic claims: an `AUTO` review from `rejection_reason`, and a `MIGRATED` review from the old review fields (`audit_user_id_review`). It produces a comparison report. Each country runs it, checks the report, then confirms. | The command can be run again; it never changes the claim tables. |
 | **C. Switch readers, then drop fields** | Each of the 8 modules reads the computed state or the claim response. Old fields are dropped only once all have switched. | Per module, until the drop. |
 
-## 9. FHIR mapping
+## 8. FHIR mapping
 
 | openIMIS | FHIR `ClaimResponse` | Notes |
 |---|---|---|
@@ -278,40 +227,34 @@ link insurance to lines; this is an openIMIS extension).
 | `ReviewError` | `error` | |
 | `ReviewNote` | `processNote` | `type` = visibility. Internal notes are not published. |
 | `ReviewInsurance` | `insurance` | **Extension:** the lines the policy was applied to. |
-| `ApprovedBenefit` | `preAuthRef` / `preAuthPeriod` | |
-| `Claim.use` | `Claim.use` | |
 
 `api_fhir_r4/converters/claimResponseConverter.py` already maps the claim to a
 `ClaimResponse`. It will read the computed state instead.
 
-## 10. Related work
+## 9. Related work
 
 - **Merge `ClaimItem` / `ClaimService`** behind a generic link: future RFC.
   `line_ref` and the generic link in this RFC prepare for it.
-- **Price lists as agreements** (a link table with validity dates and optional
-  product scope): future RFC.
-- **Rights** (recurring benefits): future RFC; another source of
-  `ApprovedBenefit`.
-- **Replace `ClaimDedRem`** with `ApprovedBenefit` uses: future RFC.
+- **[Price lists as facility agreements](feature-price-list-agreements.md)**:
+  separate RFC.
+- **[Pre-authorisation and ApprovedBenefit](feature-preauth-approved-benefit.md)**:
+  separate RFC, which needs this one.
 - **`ValidityMixin.replace_object` on `OpenIMISBusinessModel`**: tech debt
-  ticket (OP-3181). From reading the code, not from running it: the copy keeps
-  the `unique` uuid, and the integer `id` is written into the UUID field
-  `replacement_uuid`.
+  (OP-3181). Reproduced on `UserBusinessAccess`: the copy keeps the unique
+  uuid, so the insert fails; past that, the integer `id` is written into the
+  UUID field `replacement_uuid`.
 - **Grievance**: the route for facility disputes (rule 9). It references the
   published claim response.
 
-## 11. Open questions
+## 10. Open questions
 
 None at the moment. Decisions taken during review of this draft:
 
-- Deductibles and ceilings apply to lines covered by an `ApprovedBenefit`; the
-  product defines them (section 7).
 - Facility disputes go through grievance and do not pause the reviews (rule 9).
 - The return-to-facility status is `CHALLENGED` (section 6).
-- The new module is `benefit` (section 7).
 - Publication has three settings (rule 8).
 
-## 12. Definition of done
+## 11. Definition of done
 
 ```gherkin
 Feature: Auditable claim review
@@ -382,37 +325,6 @@ Feature: Auditable claim review
     Then no claim response is published
     When the claim is valued
     Then a complete claim response is published
-
-  Scenario: A line that needs pre-authorisation without one is rejected
-    Given the product requires pre-authorisation for item "X"
-    And the insuree has no ApprovedBenefit for "X"
-    When a claim with "X" is checked
-    Then line "X" is rejected with the "pre-authorisation missing" reason
-
-  Scenario: A claim uses up an ApprovedBenefit
-    Given an approved pre-authorisation for 10 units of "X" valid this month
-    When a claim for 4 units of "X" is checked
-    Then 4 units are reserved
-    When the claim is valued
-    Then the 4 units are confirmed and 6 remain
-
-  Scenario: A line covered by an ApprovedBenefit still bears deductibles
-    Given an ApprovedBenefit for "X" at an approved price of 100
-    And the product has a deductible of 20
-    When a claim with "X" is processed
-    Then line "X" is priced at 100 rather than the price-list price
-    And the deductible of 20 is applied
-
-  Scenario: A rejected line releases its use
-    Given 4 units of "X" are reserved by a claim
-    When a review rejects that line
-    Then the 4 units are released
-
-  Scenario: No carry-over outside the product's policy
-    Given an ApprovedBenefit for "X" under product "P"
-    And the insuree has no active policy with "P" on the date of service
-    When a claim with "X" is checked
-    Then the ApprovedBenefit is not used
 
   Scenario: Migration does not change claims
     When a country runs the review migration
