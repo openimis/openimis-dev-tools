@@ -3,7 +3,7 @@ import re
 import os
 from config import GITHUB_TOKEN, TIMER, RELEASE_NAME, REPOS
 
-from github import Github, PaginatedList
+from github import Github, GithubException, PaginatedList
 import json
 
 # Path style constants for local development setup
@@ -227,6 +227,16 @@ def for_repos(repos_name,from_branch, to_branch, callback):
             output.append(res)
     return output
 
+def get_fe_index(repo, ref):
+    # Frontend modules migrated to Vite use src/index.jsx; older ones still use src/index.js
+    for path in ("src/index.jsx", "src/index.js"):
+        try:
+            return repo.get_contents(path, ref = ref).decoded_content.decode('utf-8')
+        except GithubException as e:
+            if e.status != 404:
+                raise
+    return None
+
 def get_config(repo, branches, source_branch, target_branch):
     config = {}
     config['git'] = repo.git_url
@@ -244,9 +254,11 @@ def get_config(repo, branches, source_branch, target_branch):
         if config['name'] == '@openimis/fe':
             config['nickname']= "CoreModule"
         else:
-            index = repo.get_contents("src/index.js", ref = source_branch).decoded_content.decode('utf-8')
-            config['nickname']=re.search(r'export +const +(\w+Module) += +\(cfg\) +=>',index ).group(1)
-            if config['nickname'] is None:
+            index = get_fe_index(repo, source_branch)
+            match = re.search(r'export +const +(\w+Module) += +\(cfg\) +=>', index) if index else None
+            if match:
+                config['nickname'] = match.group(1)
+            else:
                 config['nickname'] = re.search(r'fe-(.+)$',package_conf['name'] ).group(1).capitalize()+"Module"
 
     else:
@@ -280,7 +292,7 @@ def print_be_pip_table(modules):
             "name": "{}",
             "pip": "{}=={}"
         }}""".format(module['nickname'], module['name'], module['version']) + '\n')
-        f.write(f"""{{"be_source_package": [{",".join(modules_json)}]}}""")
+        f.write(f"""{{"modules": [{",".join(modules_json)}]}}""")
 def print_be_solution_builder(modules):
     with open('source-be.json', 'w') as f:
         modules_json = []
@@ -298,6 +310,16 @@ def print_fe_table(modules):
         f.write(f'|=HYPERLINK("https://github.com/openimis/openimis-fe_js","Frontend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-fe_js/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |' + '\n')
         for module in modules:
             f.write(f'|=HYPERLINK("{module["url"]}","FE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.npmjs.com/package/@openimis/{module["name"].replace("@openimis/", "").lower()}/v/{module["clean_version"]}","npm:{module["name"]}")|' + '\n')
+# openimis-config-vite.js fails without "locales"
+FE_LOCALES_JSON = """"locales": [
+        {
+            "languages": ["en", "en-GB"],
+            "intl": "en-GB",
+            "fileNames": "en"
+        }
+    ],
+"""
+
 def print_fe_git_table(modules):
     with open('openimis-fe-git.json', 'w') as f:
         modules_json = []
@@ -306,8 +328,8 @@ def print_fe_git_table(modules):
             "name": "{module['nickname']}",
             "npm": "{module['name']}@{module['git']}#{RELEASE_NAME}"
         }}""" + '\n')
-        f.write(f"""{{"modules": [{",".join(modules_json)}]}}""")
-        
+        f.write(f"""{{{FE_LOCALES_JSON}"modules": [{",".join(modules_json)}]}}""")
+
 def print_fe_npm_table(modules):
     with open('openimis-fe-npm.json', 'w') as f:
         modules_json = []
@@ -316,7 +338,7 @@ def print_fe_npm_table(modules):
             "name": "{module['nickname']}",
             "npm": "{module['name']}@>={module['version']}"
         }}""" + '\n')
-        f.write(f"""{{"modules": [{",".join(modules_json)}]}}""")
+        f.write(f"""{{{FE_LOCALES_JSON}"modules": [{",".join(modules_json)}]}}""")
 def print_fe_solution_builder(modules , branch):
     with open('source-fe.json', 'w') as f:
   
