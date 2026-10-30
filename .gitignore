@@ -1,5 +1,5 @@
-*config.py
 *.pyc
+.secrets
 .idea/
 .vscode/
 frontend-packages/

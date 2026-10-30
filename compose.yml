@@ -38,12 +38,10 @@ services:
       retries: 5
       start_period: 30s
     volumes:
-      - database:/var/lib/postgresql/data
+      - database:/var/lib/postgresql
     restart: always
     ports:
       - 5432:5432
-
-
   db-mssql:
     image: ghcr.io/openimis/openimis-mssql:${DB_TAG:-develop}
     restart: always
@@ -63,9 +61,9 @@ services:
       start_period: 100s
     volumes:
       - database-mssql:/var/opt/mssql/data
-
 volumes:
   database:
+  database-14:
   database-mssql:
   nodes_volume:
   pip-cache:

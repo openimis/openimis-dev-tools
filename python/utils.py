@@ -1,9 +1,26 @@
 import urllib.request
 import re
-from config import GITHUB_TOKEN, TIMER,  RELEASE_NAME
+import os
+from config import GITHUB_TOKEN, TIMER, RELEASE_NAME, REPOS
 
-from github import Github, PaginatedList
+from github import Github, GithubException, PaginatedList
 import json
+
+# Path style constants for local development setup
+PATH_STYLE = 'FULL'  # Options: 'RELATIVE', 'FULL', 'DOCKER'
+BASE_PATH = '/mnt/data/Development/openimis-dev-tools'
+
+def get_module_path(name, modules_install_path, imis_json_path):
+    """Get module path based on style for local development setup"""
+    relative_path = os.path.relpath(modules_install_path, os.path.dirname(imis_json_path))
+    if PATH_STYLE == 'RELATIVE':
+        return os.path.join(relative_path, name)
+    elif PATH_STYLE == 'FULL':
+        return os.path.join(BASE_PATH, 'frontend-packages', name)
+    elif PATH_STYLE == 'DOCKER':
+        return os.path.join('/frontend-packages', name)
+    else:
+        return os.path.join(modules_install_path, name)
 
 
 
@@ -46,7 +63,7 @@ def create_pr(repo,from_branch,to_branch):
             diff_str = page.read()
             if '@@' in  str(diff_str):
                 print("PR created between  {} and  {}  for repo {}".format(from_branch,to_branch, repo.name))
-                pr = repo.create_pull(title=title, body=title, head=from_branch, base=to_branch, draft=True)
+                pr = repo.create_pull(title=title, body=title, head=from_branch, base=to_branch, draft=False)
                 return pr.number
             else:
                 print("no change despite commit between  {} and  {}  for repo {}".format(from_branch,to_branch, repo.name))
@@ -134,6 +151,10 @@ def walk_config_be(g,be, callback):
     for module in be['modules']:
         module_name = parse_pip(module['pip'])
         if module_name is not None:
+            if REPOS and module['name'] not in REPOS:
+                print(f"Using original definition for {module['name']} - not in REPOS list")
+                res.append(module)
+                continue
             repo = g.get_repo(module_name)
             ref = parse_pip_branch(module['pip'])
             if ref in [b.name for b in list(repo.get_branches())]:
@@ -142,16 +163,22 @@ def walk_config_be(g,be, callback):
                 r = callback(repo, module['name'])
             if r is not None:
                 res.append(r)
-                
+
     return res
 def walk_config_fe(g,fe, callback):
     res = []
-    
+
     for module in fe['modules']:
         module_name = parse_npm(module['npm'])
         if 'file:' in module['npm']:
-            pass
+            res.append(module)
         elif module_name is not None:
+            # Check if REPOS is not empty and module_name is in REPOS
+            if REPOS and  module['name'] not in REPOS:
+                print(f"Using original definition for {module['name']} - not in REPOS list")
+                res.append(module)
+                continue
+
             repo_url = parse_npm_github(module['npm'])
             if repo_url:
                 repo = g.get_repo(repo_url)
@@ -162,7 +189,7 @@ def walk_config_fe(g,fe, callback):
                     r = callback(repo, module['name'])
                 if r is not None:
                     res.append(r)
-                
+
     return res
  
 def flatten_json(y):
@@ -200,10 +227,21 @@ def for_repos(repos_name,from_branch, to_branch, callback):
             output.append(res)
     return output
 
+def get_fe_index(repo, ref):
+    # Frontend modules migrated to Vite use src/index.jsx; older ones still use src/index.js
+    for path in ("src/index.jsx", "src/index.js"):
+        try:
+            return repo.get_contents(path, ref = ref).decoded_content.decode('utf-8')
+        except GithubException as e:
+            if e.status != 404:
+                raise
+    return None
+
 def get_config(repo, branches, source_branch, target_branch):
     config = {}
     config['git'] = repo.git_url
     config['url'] = repo.html_url
+    config['branch'] = target_branch
     try:
         config['version'] = repo.get_latest_release().tag_name
     except:
@@ -216,9 +254,11 @@ def get_config(repo, branches, source_branch, target_branch):
         if config['name'] == '@openimis/fe':
             config['nickname']= "CoreModule"
         else:
-            index = repo.get_contents("src/index.js", ref = source_branch).decoded_content.decode('utf-8')
-            config['nickname']=re.search(r'export +const +(\w+Module) += +\(cfg\) +=>',index ).group(1)
-            if config['nickname'] is None:
+            index = get_fe_index(repo, source_branch)
+            match = re.search(r'export +const +(\w+Module) += +\(cfg\) +=>', index) if index else None
+            if match:
+                config['nickname'] = match.group(1)
+            else:
                 config['nickname'] = re.search(r'fe-(.+)$',package_conf['name'] ).group(1).capitalize()+"Module"
 
     else:
@@ -252,7 +292,7 @@ def print_be_pip_table(modules):
             "name": "{}",
             "pip": "{}=={}"
         }}""".format(module['nickname'], module['name'], module['version']) + '\n')
-        f.write(f"""{{"be_source_package": [{",".join(modules_json)}]}}""")
+        f.write(f"""{{"modules": [{",".join(modules_json)}]}}""")
 def print_be_solution_builder(modules):
     with open('source-be.json', 'w') as f:
         modules_json = []
@@ -260,15 +300,26 @@ def print_be_solution_builder(modules):
             modules_json.append(""""{0}":{{
             "package": "{1}",
             "git": "{2}",
-            "version": "{3}"
-        }}""".format(module['nickname'], module['name'],module["url"], module['version']) + "\n")
-        f.write(f"""{{"be_source_package": [{",".join(modules_json)}]}}""")
+            "version": "{3}",
+            "branch": "{4}"
+        }}\n""".format(module['nickname'], module['name'],module["url"], module['version'].replace("v",""), module['branch']))
+        f.write(f"""{{"be_source_package": {{{",".join(modules_json)}}}}}""")
 
 def print_fe_table(modules):
     with open('fe_references.txt', 'w') as f:
         f.write(f'|=HYPERLINK("https://github.com/openimis/openimis-fe_js","Frontend Assembly")|=HYPERLINK("https://github.com/openimis/openimis-fe_js/releases/tag/{RELEASE_NAME.split("/")[-1]}","{RELEASE_NAME.split("/")[-1]}")|GA| |' + '\n')
         for module in modules:
             f.write(f'|=HYPERLINK("{module["url"]}","FE {convert_to_title_case(module["nickname"])}")|=HYPERLINK("{module["url"]}/releases/tag/{module["version"]}","v{module["clean_version"]}")|GA|=HYPERLINK("https://www.npmjs.com/package/@openimis/{module["name"].replace("@openimis/", "").lower()}/v/{module["clean_version"]}","npm:{module["name"]}")|' + '\n')
+# openimis-config-vite.js fails without "locales"
+FE_LOCALES_JSON = """"locales": [
+        {
+            "languages": ["en", "en-GB"],
+            "intl": "en-GB",
+            "fileNames": "en"
+        }
+    ],
+"""
+
 def print_fe_git_table(modules):
     with open('openimis-fe-git.json', 'w') as f:
         modules_json = []
@@ -277,8 +328,8 @@ def print_fe_git_table(modules):
             "name": "{module['nickname']}",
             "npm": "{module['name']}@{module['git']}#{RELEASE_NAME}"
         }}""" + '\n')
-        f.write(f"""{{"modules": [{",".join(modules_json)}]}}""")
-        
+        f.write(f"""{{{FE_LOCALES_JSON}"modules": [{",".join(modules_json)}]}}""")
+
 def print_fe_npm_table(modules):
     with open('openimis-fe-npm.json', 'w') as f:
         modules_json = []
@@ -287,16 +338,21 @@ def print_fe_npm_table(modules):
             "name": "{module['nickname']}",
             "npm": "{module['name']}@>={module['version']}"
         }}""" + '\n')
-        f.write(f"""{{"modules": [{",".join(modules_json)}]}}""")
-def print_fe_solution_builder(modules):
+        f.write(f"""{{{FE_LOCALES_JSON}"modules": [{",".join(modules_json)}]}}""")
+def print_fe_solution_builder(modules , branch):
     with open('source-fe.json', 'w') as f:
   
         modules_json = []
         for module in modules:
             modules_json.append(""""{0}":{{
-           "{0}Module":{{
             "package": "{1}",
             "git": "{2}",
-            "version": "{3}"
-        }}""".format(module['nickname'], module['name'],module["url"], module['version']) + '\n')
-        f.write(f"""{{"be_source_package": {{{",".join(modules_json)}]}}}}""")
+            "version": "{3}",
+            "branch": "{4}"
+        }}""".format(module['nickname'], module['name'],module["url"], module['version'], module['branch']) + '\n')
+        f.write(f"""{{"be_source_package": {{{",".join(modules_json)}}}}}""")
+        
+def get_release_version(release_name):
+    # release/26.04 -> 26.04, anything else is used as-is (e.g. develop)
+    match = re.match(r'release/([0-9]{2}\.[0-9]{2})$', release_name)
+    return match.group(1) if match else release_name
