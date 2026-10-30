@@ -4,7 +4,16 @@ This repository provides tools and scripts to help developers set up and work on
 
 ## Quick Start for New Developers
 
-### Prerequisites
+## Requirements
+
+- Python 3.x
+- GitPython (`pip install GitPython`)
+- PyGithub (`pip install PyGithub`)
+- Valid GitHub token with repo access permissions
+
+## Development setup
+
+### Cloning with frontend and backend
 
 Before you begin, ensure you have the following installed:
 
@@ -173,7 +182,7 @@ The backend will be available at `http://localhost:8000`.
 
 `docker compose up --build -d `
 
-#### Docker Compose Configuration
+### Docker Compose Configuration
 
 The main `compose.yml` file uses Docker Compose's `extends` feature to reference service definitions from `compose-version.yml`. This allows for modular configuration of different environments and services.
 
@@ -184,7 +193,7 @@ To run specific services, use profiles or service names. For example:
 - `docker compose up migrations` - Run only migrations, not run by default
 - `docker compose up backend frontend` - Run specific services
 
-#### Available Services
+### Available Services
 
 | Service Name | Type | Environment | Description |
 |--------------|------|-------------|-------------|
@@ -197,7 +206,7 @@ To run specific services, use profiles or service names. For example:
 | `db` | Database | N/A | PostgreSQL database server. |
 | `db-mssql` | Database | N/A | Microsoft SQL Server database server. |
 
-#### Shared Virtual Environment for Backend Containers
+### Shared Virtual Environment for Backend Containers
 
 The backend containers (migrations, backend-dev, backend-debug) now use a shared virtual environment volume (`venv`) to store installed Python modules. This prevents the need to reinstall modules each time a container starts, improving startup times and avoiding import failures.
 
