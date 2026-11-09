@@ -265,6 +265,8 @@ openimis-dev-tools/
 ├── frontend-packages/      # Cloned frontend modules
 ├── python/                 # Development and release scripts
 ├── RELEASE.md              # Release management documentation
+├── docs/                   # Cross-cutting architecture & integration guides
+│   └── SBR-Shared-Beneficiary-Registry.md
 └── compose.yml            # Docker Compose configuration
 ```
 

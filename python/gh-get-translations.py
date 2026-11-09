@@ -1,13 +1,14 @@
 import re
 from config import GITHUB_TOKEN, RELEASE_NAME, REPOS
 from github import Github # pip install pyGithub
-from utils import flatten_json
+from utils import flatten_json, matches_filter, parse_filter_args
 import json
 
 
 import semantic_version # pip install semantic-version
 
 def main():
+    repo_filter = parse_filter_args('Dump the flattened English translations of every frontend module.')
     g = Github(
             GITHUB_TOKEN,
             seconds_between_requests=0.75,
@@ -23,7 +24,7 @@ def main():
     fe = json.loads(repo.get_contents("openimis.json", ref ='develop' ).decoded_content)
     for module in fe['modules']:
         module_name = parse_npm(module['npm'])
-        if module_name is not None:
+        if module_name is not None and matches_filter(module_name, repo_filter):
             repo = g.get_repo(module_name)
             content = None
             module_nickname = module_name.replace('openimis-','').replace('_js','')

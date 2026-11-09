@@ -1,19 +1,17 @@
 from config import  RELEASE_NAME 
 from github import Github
-from utils import create_pr, parse_npm, parse_pip, create_pr_repo, for_repos, get_repos_name
+from utils import create_pr, parse_npm, parse_pip, create_pr_repo, for_repos, get_repos_name, parse_filter_args
 
-MASK =  'openimis-be-calcrule_validations_py'
 def main():
     release_name = RELEASE_NAME
+    # Required: without it every backend package would be published again
+    repo_filter = parse_filter_args('Re-run the PyPI publish workflow on the latest release tag.',
+                                    required=True)
     repos_name = get_repos_name(ref_branch=RELEASE_NAME)
-    config = for_repos(repos_name,release_name, '', callback)
-        
+    config = for_repos(repos_name,release_name, '', callback, repo_filter)
+
         # check if release exists
 def callback(repo,branches,release_name, to_branch):
-    
-    if MASK and  MASK not in repo.name:
-        print(f" skip {repo.name}")
-        return 
     print(repo.name)
     tag = repo.get_latest_release().tag_name
 

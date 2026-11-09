@@ -12,7 +12,7 @@ import time
 
 from config import GITHUB_TOKEN, RELEASE_NAME
 from github import Github
-from utils import get_repos_name
+from utils import add_filter_argument, filter_repos, get_repos_name
 
 OK_CONCLUSIONS = {'success', 'neutral', 'skipped'}
 # Sonar is reported but never blocks the merge
@@ -102,13 +102,6 @@ def process(repo, from_branch, to_branch, merge, allow_untested, ignore_all_test
     return 'merged', f"{label} merged ({reason})"
 
 
-def regex(pattern):
-    try:
-        return re.compile(pattern)
-    except re.error as e:
-        raise argparse.ArgumentTypeError(f"invalid regex {pattern!r}: {e}")
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--merge', action='store_true', help='actually merge; default is a dry run')
@@ -118,16 +111,13 @@ if __name__ == '__main__':
                         help='do not block on the backend "Run All Tests" job; the module tests still gate')
     parser.add_argument('--skip-lint', action='store_true',
                         help='do not block on flake8 and ESLint checks; they are still reported')
-    parser.add_argument('--filter', type=regex, metavar='REGEX',
-                        help='only process repos whose name matches REGEX (re.search); default is all repos')
+    add_filter_argument(parser)
     args = parser.parse_args()
 
     from_branch = RELEASE_NAME
     to_branch = 'develop'
     g = Github(GITHUB_TOKEN, seconds_between_requests=0.75, seconds_between_writes=2.0)
-    repos_name = get_repos_name(RELEASE_NAME)
-    if args.filter:
-        repos_name = [name for name in repos_name if args.filter.search(name)]
+    repos_name = filter_repos(get_repos_name(RELEASE_NAME), args.filter)
 
     report = {}
     for repo_name in repos_name:

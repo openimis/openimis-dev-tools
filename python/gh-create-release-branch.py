@@ -26,9 +26,10 @@ def create_release_branch(repo,branches,source_branch, target_branch):
 if __name__ == '__main__':
     from_branch = 'develop'
     to_branch = RELEASE_NAME
+    repo_filter = parse_filter_args(f'Create {to_branch} from {from_branch} on every module repo.')
     repos_name = get_repos_name()
-    
-    output = for_repos(repos_name, from_branch, to_branch, create_release_branch)
+
+    output = for_repos(repos_name, from_branch, to_branch, create_release_branch, repo_filter)
     
     be_config = list(filter(lambda item: item['scope'] == 'be', output))
     fe_config = list(filter(lambda item: item['scope'] == 'fe', output))

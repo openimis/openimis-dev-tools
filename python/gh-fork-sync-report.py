@@ -41,7 +41,7 @@ from config import (
     REPOS,
     UPSTREAM_ORG,
 )
-from utils import get_repos_name
+from utils import add_filter_argument, filter_repos, get_repos_name, matches_repos_filter
 
 ASSEMBLY_REPOS = (
     'openimis-be_py',
@@ -107,13 +107,6 @@ def collect_repo_names(include_assemblies=True):
                 seen.add(name)
                 names.append(name)
     return names
-
-
-def matches_repos_filter(repo_name, filters):
-    if not filters:
-        return True
-    lowered = repo_name.lower()
-    return any(item.lower() in lowered for item in filters)
 
 
 def get_repo_or_none(g, full_name):
@@ -378,6 +371,7 @@ def parse_args(argv):
                         help='Write the raw results to this JSON file')
     parser.add_argument('--keep-clones', action='store_true',
                         help='Keep the temporary bare repos used for merge tests')
+    add_filter_argument(parser)
     return parser.parse_args(argv)
 
 
@@ -395,6 +389,7 @@ def main(argv=None):
           f'{args.fork_org}:{args.branch}')
     repo_names = collect_repo_names(include_assemblies=not args.no_assemblies)
     repo_names = [name for name in repo_names if matches_repos_filter(name, filters)]
+    repo_names = filter_repos(repo_names, args.filter)
     if args.limit:
         repo_names = repo_names[: args.limit]
     print(f'{len(repo_names)} repository(ies) to inspect\n')
