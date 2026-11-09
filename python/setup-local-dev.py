@@ -6,15 +6,21 @@ from config import (
     BRANCH_SOL,
     MODE
 )
-from utils import parse_pip, walk_config_be, walk_config_fe, get_module_path
+from utils import parse_pip, walk_config_be, walk_config_fe, get_module_path, add_filter_argument
+import argparse
 import os
 import json
 import git  # pip install GitPython
 from github import Github  # pip install pyGithub
-import sys
 
-if len(sys.argv) > 2:
-    MODE = sys.argv[2]
+parser = argparse.ArgumentParser(
+    description='Clone or update the module repos and write backend/ and frontend/openimis-dev.json.')
+# Positional arguments kept for the historical "setup-local-dev.py <unused> <mode>" call
+parser.add_argument('legacy', nargs='*', help=argparse.SUPPRESS)
+add_filter_argument(parser)
+ARGS = parser.parse_args()
+if len(ARGS.legacy) > 1:
+    MODE = ARGS.legacy[1]
 SOLUTION = None
 
 
@@ -68,8 +74,8 @@ def main():
         with open("./frontend/openimis.json", "r") as infile:
             fe = json.load(infile)
    
-    be["modules"] = walk_config_be(g, be, clone_repo_be)
-    fe["modules"] = walk_config_fe(g, fe, clone_repo_fe)
+    be["modules"] = walk_config_be(g, be, clone_repo_be, ARGS.filter, keep_local_be)
+    fe["modules"] = walk_config_fe(g, fe, clone_repo_fe, ARGS.filter, keep_local_fe)
     # Writing to sample.json
     with open("./backend/openimis-dev.json", "w") as outfile:
         outfile.write(json.dumps(be, indent=4, default=set_default))
@@ -97,6 +103,21 @@ def clone_repo_fe(repo, module_name, ref=BRANCH_FE):
     details =  clone_repo(repo, module_name, ref=ref, root_path="./frontend-packages")
     module_path = get_module_path(details['name'], "./frontend-packages", "./frontend/openimis.json")
     return {"name": f"{details['name']}", "npm": f"file:{module_path}"}
+
+
+# A module skipped by --filter is not pulled, but an existing clone stays
+# the source in openimis-dev.json instead of falling back to the git/npm package
+def keep_local_be(module):
+    if not os.path.isdir(os.path.join("./backend-packages", module['name'])):
+        return module
+    module_path = get_module_path(module['name'], "./backend-packages", "./backend/openimis.json")
+    return {"name": module['name'], "pip": f"-e file:{module_path}"}
+
+def keep_local_fe(module):
+    if not os.path.isdir(os.path.join("./frontend-packages", module['name'])):
+        return module
+    module_path = get_module_path(module['name'], "./frontend-packages", "./frontend/openimis.json")
+    return {"name": module['name'], "npm": f"file:{module_path}"}
 
 
 def clone_repo(repo, module_name, ref='develop', root_path="../"):

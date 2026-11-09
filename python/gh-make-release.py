@@ -1,6 +1,6 @@
 import re
 from config import  RELEASE_NAME
-from utils import for_repos, get_repos_name
+from utils import for_repos, get_repos_name, parse_filter_args
 from github import Github, PaginatedList # pip install pyGithub
 import json
 
@@ -9,8 +9,9 @@ import semantic_version # pip install semantic-version
 def main():
     from_branch = RELEASE_NAME
     to_branch = RELEASE_NAME
+    repo_filter = parse_filter_args(f'Create the GitHub releases of {RELEASE_NAME}.')
     repos_name = get_repos_name(ref_branch=RELEASE_NAME)
-    for_repos(repos_name, from_branch, to_branch, create_release) 
+    for_repos(repos_name, from_branch, to_branch, create_release, repo_filter)
     
 def create_release(repo,branches, from_branch, to_branch):
     v=None

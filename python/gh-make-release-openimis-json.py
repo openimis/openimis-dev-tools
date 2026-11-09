@@ -9,8 +9,10 @@ import semantic_version  # pip install semantic-version
 
 def main():
     release_name = RELEASE_NAME
+    repo_filter = parse_filter_args(
+        f'Print the {release_name} openimis.json files; with --filter they list only the matching modules.')
     repos_name = get_repos_name(ref_branch=RELEASE_NAME)
-    config = for_repos(repos_name,release_name, release_name, get_config)
+    config = for_repos(repos_name,release_name, release_name, get_config, repo_filter)
     print_fe_config(list(filter(lambda c: c['scope'] == 'fe', config)), release_name)
     print_be_config(list(filter(lambda c: c['scope'] == 'be', config)), release_name)
 

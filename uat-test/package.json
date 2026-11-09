@@ -1,0 +1,16 @@
+{
+  "name": "openimis-uat-test",
+  "private": true,
+  "description": "openIMIS UAT runner: Cypress specs seeded from openimis-dist_dkr, with a TestLink-mapped report",
+  "type": "commonjs",
+  "scripts": {
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
+    "uat": "node scripts/run-uat.mjs",
+    "uat:report": "node scripts/run-uat.mjs --report-only"
+  },
+  "devDependencies": {
+    "cypress": "^15.17.0",
+    "cypress-file-upload": "^5.0.8"
+  }
+}
