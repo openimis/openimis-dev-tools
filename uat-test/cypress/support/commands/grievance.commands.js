@@ -110,9 +110,9 @@ export function registerGrievanceCommands() {
         }
       } else if (grievanceData.reporterType === 'Attending Staff') {
         if (grievanceData.attendingStaff) {
-          cy.chooseMuiAutocomplete('Complainant', grievanceData.attendingStaff);
+          cy.chooseMuiAutocomplete('Attending Staff', grievanceData.attendingStaff);
         } else {
-          cy.chooseMuiAutocomplete('Complainant');
+          cy.chooseMuiAutocomplete('Attending Staff');
         }
       }
     }
