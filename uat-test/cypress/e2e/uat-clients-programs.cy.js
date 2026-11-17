@@ -96,7 +96,10 @@ describe('Clients / Programs of individuals and groups', () => {
       });
     });
     cy.then(() => {
-      ids.individuals.forEach((uuid) => mutateOk('createBeneficiary', `individualId: "${uuid}" benefitPlanId: "${ids.individualProgram}" status: ACTIVE`));
+      // Advanced filters match the beneficiary's own data (Beneficiary.json_ext), which
+      // enrolment copies from the individual: seed it the same way.
+      ids.individuals.forEach((uuid, i) => mutateOk('createBeneficiary', `individualId: "${uuid}" benefitPlanId: "${ids.individualProgram}" status: ACTIVE
+        jsonExt: ${gqlJson({ number_of_children: beneficiaries[i].noc })}`));
       ids.groups.forEach((uuid) => mutateOk('createGroupBeneficiary', `groupId: "${uuid}" benefitPlanId: "${ids.groupProgram}" status: ACTIVE`));
     });
     cy.then(() => {
@@ -138,6 +141,8 @@ describe('Clients / Programs of individuals and groups', () => {
       cy.contains('button', /^Filter$/).click();
     });
     cy.get('[role="dialog"]').should('not.exist');
+    // The dialog's Filter stages the criteria; Search runs the query (as in OCM-1141).
+    cy.contains('button', 'Search').click();
     cy.contains('2 Beneficiaries', { timeout: TIMEOUTS.BACKEND_VALIDATION });
     cy.contains('tr', beneficiaries[0].firstName).should('not.exist');
 
@@ -151,7 +156,9 @@ describe('Clients / Programs of individuals and groups', () => {
     openProgramFromTab(groupCode);
     cy.contains(`${groupCodes.length} Group Beneficiaries`, { timeout: TIMEOUTS.BACKEND_VALIDATION });
 
-    cy.enterMuiInput('Code', groupCodes[1]);
+    // The program header above also has a "Code" field: type in the searcher's filter pane.
+    cy.contains('.paperHeaderTitle', 'Search Criteria').parents('.MuiPaper-root').first()
+      .within(() => cy.enterMuiInput('Code', groupCodes[1]));
     cy.contains('button', 'Search').click();
     cy.contains('1 Group Beneficiaries', { timeout: TIMEOUTS.BACKEND_VALIDATION });
     tableRows().should('have.length', 1).and('contain', groupCodes[1]);
