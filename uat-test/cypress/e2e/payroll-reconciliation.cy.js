@@ -39,38 +39,6 @@ const beneficiarySchema = {
   },
 };
 
-// Fetch enrolled beneficiary identities (sorted by full name) for a program
-// via the GraphQL API.  Returns a chained array of `"<First> <Last>"` strings.
-// Individual has no `code` field — beneficiary identity in this codebase is
-// effectively (firstName, lastName) (plus dob, but names alone are unique
-// enough for the test fixture's individuals).  We filter by benefit plan
-// CODE (8-char unique) rather than name to avoid graphene-django field
-// mapping quirks with `iexact`.
-function getEnrolledBeneficiaryNames(programCode) {
-  return cy.request({
-    method: 'POST',
-    url: '/api/graphql',
-    body: {
-      query: `query Beneficiaries($code: String) {
-        beneficiary(benefitPlan_Code_Iexact: $code, isDeleted: false, first: 100) {
-          edges { node { individual { firstName lastName } } }
-        }
-      }`,
-      variables: { code: programCode },
-    },
-  }).then((res) => {
-    expect(res.status, 'beneficiary GQL status').to.eq(200);
-    if (res.body?.errors) {
-      // Surface the actual server error so a future failure isn't a silent ?? [].
-      throw new Error(`Beneficiary GQL errors: ${JSON.stringify(res.body.errors)}`);
-    }
-    const edges = res.body?.data?.beneficiary?.edges ?? [];
-    const names = edges.map((e) => `${e.node.individual.firstName} ${e.node.individual.lastName}`);
-    names.sort((a, b) => a.localeCompare(b));
-    return cy.wrap(names);
-  });
-}
-
 // ---------------------------------------------------------------------------
 //                          A. Cash Transfer (Social Protection)
 // ---------------------------------------------------------------------------
@@ -110,10 +78,16 @@ describe('Payroll reconciliation — cash transfer (social protection calcrule)'
       programName, programCode, 'Active', 'Able bodied', 'Exact', 'False',
     );
 
-    // 3. Capture the enrolled count so the CSV row count can be asserted.
-    getEnrolledBeneficiaryNames(programCode).then((names) => {
-      expect(names.length, 'enrolled beneficiary count').to.be.greaterThan(0);
-      enrolledCount = names.length;
+    // 3. Capture the enrolled count so the CSV row count can be asserted. The total, not
+    //    the length of a first page: the baseline holds more than 100 such individuals.
+    cy.request({
+      method: 'POST',
+      url: '/api/graphql',
+      body: { query: `{ beneficiary(benefitPlan_Code_Iexact: "${programCode}", isDeleted: false) { totalCount } }` },
+    }).then((res) => {
+      const total = res.body?.data?.beneficiary?.totalCount;
+      expect(total, 'enrolled beneficiary count').to.be.greaterThan(0);
+      enrolledCount = total;
     });
 
     // 4. Payment plan with the social-protection (cash transfer) calc rule.
@@ -231,7 +205,10 @@ describe('Payroll reconciliation — cash transfer (social protection calcrule)'
       // After approval the detail page reflects the terminal status.  We
       // navigate via /front/payrolls (which lists payrolls of any status).
       cy.openPayrollForViewFromList(payrollName);
-      cy.assertMuiInput('Status', PAYROLL_STATUS.RECONCILED);
+      // Exact label, as the payroll's other "Status" fields are selects whose input is
+      // MUI's hidden native one.
+      cy.contains('label', /^Status$/).siblings('.MuiInputBase-root').find('input', { timeout: TIMEOUTS.SERVER_RESULT })
+        .should('have.value', PAYROLL_STATUS.RECONCILED);
     });
   });
 });
@@ -303,7 +280,9 @@ describe('Payroll reconciliation — timesheet (base-day-rate calcrule)', () => 
       programName, projectName, activityName,
       baseline().locations.r1.label, null, '50', workingDays,
     );
-    cy.url().then((url) => { projectPath = new URL(url).pathname; });
+    // The page moves to project/<uuid> only once the saved project is fetched again (OP-3275).
+    cy.url({ timeout: TIMEOUTS.SERVER_RESULT }).should('match', /project\/[0-9a-f-]{36}/)
+      .then((url) => { projectPath = new URL(url).pathname; });
 
     cy.then(() => cy.assignBeneficiariesToProject(projectPath));
 
@@ -459,7 +438,10 @@ describe('Payroll reconciliation — timesheet (base-day-rate calcrule)', () => 
       cy.approvePayrollReconciliationTask(payrollName);
 
       cy.openPayrollForViewFromList(payrollName);
-      cy.assertMuiInput('Status', PAYROLL_STATUS.RECONCILED);
+      // Exact label, as the payroll's other "Status" fields are selects whose input is
+      // MUI's hidden native one.
+      cy.contains('label', /^Status$/).siblings('.MuiInputBase-root').find('input', { timeout: TIMEOUTS.SERVER_RESULT })
+        .should('have.value', PAYROLL_STATUS.RECONCILED);
     });
   });
 });
