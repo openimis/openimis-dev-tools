@@ -4,6 +4,8 @@
 // project form of a program. The demo dataset has no program: the spec creates one,
 // plus one activity named per run, and removes both at the end.
 
+import { TIMEOUTS } from '../support/constants';
+
 const runId = Date.now().toString(36).slice(-5).toUpperCase();
 const TIMEOUT = 5000;
 const programCode = `UA${runId}`;
@@ -34,9 +36,19 @@ function typeInProjectActivity(text) {
   cy.contains('button', 'Create Project').click();
   cy.contains('h6', 'Project details');
   cy.contains('label', 'Activity').should('have.class', 'Mui-required');
+  // Opening the picker loads the first page of activities by name, which no longer holds
+  // this run's activity once enough others sort before it; MUI then filters that page and
+  // shows "No options" before the debounced search for the typed text leaves. Wait for it.
+  cy.intercept('POST', '/api/graphql', (req) => {
+    if (typeof req.body?.query === 'string' && req.body.query.includes('ActivityPicker')
+      && req.body.variables?.search === text) {
+      req.alias = 'activitySearch';
+    }
+  });
   cy.contains('label', 'Activity').siblings('.MuiInputBase-root').find('input')
     .click({ force: true })
     .type(text, { force: true });
+  cy.wait('@activitySearch', { timeout: TIMEOUTS.SERVER_RESULT });
   // Wait for the picker to answer: options or "No options".
   cy.get('.MuiAutocomplete-popper', { timeout: TIMEOUT })
     .should(($popper) => {
