@@ -6,7 +6,8 @@ export function registerTaskCommands() {
   // optional list of task sources differ.
   function ensureTaskGroup({ code, taskSources = [] }) {
     cy.visit('/front/tasks/groups');
-    cy.contains('Task Groups Found', { timeout: TIMEOUTS.BACKEND_VALIDATION });
+    // A fresh page load: app boot plus the list query take 5-7 s on a loaded host.
+    cy.contains('Task Groups Found', { timeout: TIMEOUTS.SERVER_RESULT });
 
     cy.get('table').then(($table) => {
       const exists = $table.find('tbody tr td:first-child')
@@ -178,7 +179,7 @@ export function registerTaskCommands() {
   // Approve the most recently created PaymentCycleService task.
   Cypress.Commands.add('approveLatestPaymentCycleTask', () => {
     cy.visit('/front/AllTasks');
-    cy.contains('Tasks Found', { timeout: TIMEOUTS.BACKEND_VALIDATION });
+    cy.contains('Tasks Found', { timeout: TIMEOUTS.SERVER_RESULT });
 
     cy.contains('table tbody tr', 'PaymentCycleService', { timeout: TIMEOUTS.BACKEND_VALIDATION })
       .first()

@@ -73,7 +73,8 @@ export function registerMutationCommands() {
       .then((t) => {
         const ids = t.sent.slice(t.consumed);
         t.consumed = t.sent.length;
-        ids.forEach((id) => cy.waitForMutationLog(id));
+        // Processing is server work: a save touching hundreds of rows takes seconds.
+        ids.forEach((id) => cy.waitForMutationLog(id, { timeout: Math.max(timeout, TIMEOUTS.SERVER_RESULT) }));
       });
     // The server outcome is asserted above; the journal polls it every 2 s and may lag behind.
     cy.get('ul.MuiList-root li [role="progressbar"]', { timeout: Math.max(timeout, TIMEOUTS.SERVER_RESULT) }).should('not.exist');

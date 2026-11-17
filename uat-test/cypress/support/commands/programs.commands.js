@@ -7,6 +7,9 @@ import { approvePendingTasksOf } from '../tasks-api';
 export function registerProgramCommands() {
   Cypress.Commands.add('deleteProject', (projectPath) => {
     cy.visit(projectPath);
+    // The beneficiary table's loading overlay covers the page's buttons until its query returns.
+    cy.contains('Beneficiaries Assigned', { timeout: TIMEOUTS.SERVER_RESULT });
+    cy.get('[role="progressbar"]', { timeout: TIMEOUTS.SERVER_RESULT }).should('not.exist');
     cy.get('button:is([title="Delete"],[aria-label="Delete"])').click();
     cy.contains('button', 'Ok').click();
 
@@ -76,7 +79,7 @@ export function registerProgramCommands() {
   // Filters the program list by name: programs left by earlier runs push new ones
   // off the first page. Yields the filtered query's totalCount.
   Cypress.Commands.add('searchProgramByName', (programName) => {
-    cy.waitForSearcherLoaded({ timeout: TIMEOUTS.BACKEND_VALIDATION });
+    cy.waitForSearcherLoaded();
     // Only a query filtered on this name: an unfiltered one (the list sorted by code,
     // 10 a page) answers too early and may not hold the program.
     cy.aliasGraphqlQuery(`name_Icontains: "${programName}"`, 'programSearch');
@@ -533,7 +536,7 @@ export function registerProgramCommands() {
   // projectPath: the URL path to the project detail page (captured via cy.url()).
   Cypress.Commands.add('assignBeneficiariesToProject', (projectPath) => {
     cy.visit(projectPath);
-    cy.contains('Beneficiaries Assigned');
+    cy.contains('Beneficiaries Assigned', { timeout: TIMEOUTS.SERVER_RESULT });
     // The beneficiary table's loading overlay covers the button until its query returns.
     cy.contains('button', 'Assign Beneficiaries').click({ timeout: TIMEOUTS.SERVER_RESULT });
     cy.get('[role="progressbar"]').should('exist');
@@ -574,7 +577,7 @@ export function registerProgramCommands() {
   // appear in the project table if assignment is partial.
   Cypress.Commands.add('getProjectAssignedBeneficiaryNames', (projectPath) => {
     cy.visit(projectPath);
-    cy.contains('Beneficiaries Assigned');
+    cy.contains('Beneficiaries Assigned', { timeout: TIMEOUTS.SERVER_RESULT });
     // The beneficiary table's loading overlay covers the button until its query returns.
     cy.contains('button', 'Enter time').click({ timeout: TIMEOUTS.SERVER_RESULT });
 
@@ -615,7 +618,7 @@ export function registerProgramCommands() {
   // Fills every visible day cell with the given percentComplete value.
   Cypress.Commands.add('enterProjectTimeEntries', (projectPath, percentComplete) => {
     cy.visit(projectPath);
-    cy.contains('Beneficiaries Assigned');
+    cy.contains('Beneficiaries Assigned', { timeout: TIMEOUTS.SERVER_RESULT });
     // The beneficiary table's loading overlay covers the button until its query returns.
     cy.contains('button', 'Enter time').click({ timeout: TIMEOUTS.SERVER_RESULT });
 
@@ -642,7 +645,7 @@ export function registerProgramCommands() {
   // rendered in separate <td> cells (where row.text() has no separator).
   Cypress.Commands.add('enterProjectTimeEntriesPerBeneficiary', (projectPath, daysByText) => {
     cy.visit(projectPath);
-    cy.contains('Beneficiaries Assigned');
+    cy.contains('Beneficiaries Assigned', { timeout: TIMEOUTS.SERVER_RESULT });
     // The beneficiary table's loading overlay covers the button until its query returns.
     cy.contains('button', 'Enter time').click({ timeout: TIMEOUTS.SERVER_RESULT });
 
@@ -689,7 +692,9 @@ export function registerProgramCommands() {
   // Change the status of a project (e.g. to COMPLETED).
   Cypress.Commands.add('updateProjectStatus', (projectPath, status) => {
     cy.visit(projectPath);
-    cy.contains('Beneficiaries Assigned');
+    cy.contains('Beneficiaries Assigned', { timeout: TIMEOUTS.SERVER_RESULT });
+    // The beneficiary table's loading overlay covers the Status select until its query returns.
+    cy.get('[role="progressbar"]', { timeout: TIMEOUTS.SERVER_RESULT }).should('not.exist');
     cy.chooseMuiSelect('Status', status);
 
     cy.saveAndAwaitJournal({ saveTitle: 'Save' });
