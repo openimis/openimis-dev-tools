@@ -449,8 +449,12 @@ export function registerPayrollCommands() {
       .contains('button', /Upload Payment Data/i)
       .should('not.be.disabled')
       .click({ force: true });
-    // The server parses and applies the whole file before answering: hundreds of rows take seconds.
-    cy.wait('@uploadRecCsv', { responseTimeout: TIMEOUTS.SERVER_RESULT * 2 }).then((interception) => {
+    // The server parses and applies the whole file before answering, saving each row on
+    // its own: about 0.13 s a row on the UAT stack, and the cohort grows with every run
+    // (225 rows took 30 s). Allow 250 ms a row, and never less than 30 s.
+    const rowCount = csvText.trim().split('\n').length - 1;
+    const responseTimeout = Math.max(TIMEOUTS.SERVER_RESULT * 2, rowCount * 250);
+    cy.wait('@uploadRecCsv', { responseTimeout }).then((interception) => {
       const status = interception?.response?.statusCode;
       if (status >= 400) {
         // Surface the BE error so a 500 doesn't fail with just "expected N to be below 400".

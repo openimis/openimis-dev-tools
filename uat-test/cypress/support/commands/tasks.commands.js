@@ -46,6 +46,9 @@ export function registerTaskCommands() {
       .click();
     cy.contains('button', 'Ok').click();
     cy.get('[role="dialog"]', { timeout: TIMEOUTS.BACKEND_VALIDATION }).should('not.exist');
+    // Wait for the resolve mutation: a visit right after the dialog closes cancels the
+    // request before it reaches the server, and the task then stays unresolved.
+    cy.waitForSentMutations();
   }
 
   Cypress.Commands.add('ensurePermissiveTaskGroup', () => {

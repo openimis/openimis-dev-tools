@@ -31,8 +31,10 @@ export function registerSearcherCommands() {
 
   // Wait for the aliased GraphQL fetch to return, then (optionally) confirm
   // the results title is re-rendered.  Pairs with `aliasGraphqlQuery`.
+  // A list query is a server round trip: on a database grown by many runs, or while
+  // the server answers other requests of the page, it takes more than 5 s.
   Cypress.Commands.add('awaitSearcherRefresh', (alias, resultsTextOrRegex) => {
-    cy.wait(`@${alias}`, { timeout: TIMEOUTS.BACKEND_VALIDATION });
+    cy.wait(`@${alias}`, { timeout: TIMEOUTS.SERVER_RESULT });
     if (resultsTextOrRegex) {
       cy.contains(resultsTextOrRegex, { timeout: TIMEOUTS.BACKEND_VALIDATION })
         .should('be.visible');

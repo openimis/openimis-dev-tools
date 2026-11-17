@@ -118,6 +118,9 @@ function approveTask(entity, type) {
   cy.contains('button.MuiFab-root', /^check$/, { timeout: TIMEOUTS.BACKEND_VALIDATION }).should('not.be.disabled').click();
   cy.get('[role="dialog"]').contains('button', 'Ok').click();
   cy.get('[role="dialog"]').should('not.exist');
+  // The resolve mutation leaves once the dialog is answered: leaving the page at once
+  // (the next step visits another one) cancels the request before it reaches the server.
+  cy.waitForSentMutations();
 }
 
 function createActiveCycle(code) {

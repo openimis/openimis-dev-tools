@@ -374,12 +374,13 @@ export function registerProgramCommands() {
         if (body.errors?.length) throw new Error(`GraphQL: ${JSON.stringify(body.errors)}`);
         return body.data;
       });
+    const members = entityName === 'Groups' ? 'groupBeneficiary' : 'beneficiary';
+    let benefitPlanId;
     gqlData(`{ benefitPlan(code: "${programCode}", isDeleted: false) { edges { node { id } } } }`)
       .then((data) => {
         const node = data.benefitPlan.edges[0]?.node;
         if (!node) throw new Error(`No programme ${programCode}`);
-        const benefitPlanId = atob(node.id).split(':')[1];
-        const members = entityName === 'Groups' ? 'groupBeneficiary' : 'beneficiary';
+        benefitPlanId = atob(node.id).split(':')[1];
         return gqlData(`{ ${summary}(customFilters: [${JSON.stringify(customFilter)}], benefitPlanId: "${benefitPlanId}") {
           ${selected} ${toUpload} }
           inStatus: ${members}(benefitPlan_Id: "${benefitPlanId}", status: ${status.toUpperCase()}, isDeleted: false) {
@@ -457,23 +458,22 @@ export function registerProgramCommands() {
     cy.contains('div', 'Accept All')
       .find('button').should('be.disabled');
 
-    // The task is resolved asynchronously: reload the task list until it is COMPLETED.
-    const waitForImportCompleted = (attempt = 1) => {
-      cy.visit('/front/AllTasks');
-      cy.waitForSearcherLoaded();
-      cy.get('body').then(($body) => {
-        const done = $body.find('tr').filter((_, tr) => (
-          Cypress.$(tr).find('td:contains("import_valid_items")').length > 0
-          && Cypress.$(tr).find(`td:contains("${programCode}")`).length > 0
-          && Cypress.$(tr).find('td:contains("COMPLETED")').length > 0
-        )).length > 0;
-        if (done) return;
-        if (attempt >= 20) throw new Error(`import_valid_items task of ${programCode} not COMPLETED after ${attempt} reloads`);
-        cy.wait(3000);
-        waitForImportCompleted(attempt + 1);
-      });
-    };
-    waitForImportCompleted();
+    // Approving the task enrols the individuals in the same request, which takes seconds
+    // with hundreds of them, and the page does not wait for it. A COMPLETED enrolment task
+    // of this programme proves nothing: the earlier enrolment into another status left
+    // one, under the same entity. Wait for the beneficiaries themselves.
+    const waitForEnrolled = (attempt = 1) => cy.get('@numEnrolled').then((count) => gqlData(
+      `{ ${members}(benefitPlan_Id: "${benefitPlanId}", status: ${status.toUpperCase()}, isDeleted: false) { totalCount } }`,
+    ).then((data) => {
+      const inStatus = data[members].totalCount;
+      if (inStatus >= count) return;
+      if (attempt >= 20) {
+        throw new Error(`${programCode}: ${inStatus} of ${count} ${status} beneficiaries after ${attempt} polls`);
+      }
+      cy.wait(3000); // eslint-disable-line cypress/no-unnecessary-waiting
+      waitForEnrolled(attempt + 1);
+    }));
+    waitForEnrolled();
 
     cy.visit('/front/benefitPlans');
     cy.openProgramForEditFromList(programName);
