@@ -58,11 +58,16 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 const pickDateIn = (scope, label, date) => {
   cy.get(scope).contains('label', label).parent().find('button[aria-label^="Choose date"]').click();
   const target = `${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
-  const step = (n = 0) => cy.get('.MuiPickerPopper-root .MuiPickersCalendarHeader-label').invoke('text').then((text) => {
+  // While the month slides, the header holds the old and the new label at once: read it
+  // only once a single label is left, and after a click wait for the label to change, so a
+  // click is never counted twice (or the target month skipped).
+  const header = () => cy.get('.MuiPickerPopper-root .MuiPickersCalendarHeader-label').should('have.length', 1);
+  const step = (n = 0) => header().invoke('text').then((text) => {
     if (text.trim() === target) return;
     if (n > 24) throw new Error(`pickDateIn: could not reach ${target}`);
     // The popper keeps repositioning inside the dialog: Cypress sees it as animating.
     cy.get('.MuiPickerPopper-root .MuiPickersArrowSwitcher-nextIconButton').click({ waitForAnimations: false });
+    header().should(($label) => expect($label.text().trim()).not.to.eq(text.trim()));
     step(n + 1);
   });
   step();
@@ -121,6 +126,10 @@ const attachedPanel = () => attachedTitle().closest('.MuiPaper-root');
 // A replaced attached plan has its "Add New Version" and "Edit" buttons disabled.
 const isReplacedRow = (tr) => Cypress.$(tr)
   .find(':is([title="Add New Version"],[aria-label="Add New Version"],[title="Edit"],[aria-label="Edit"]) button:disabled').length >= 2;
+// In the bundle list, a replaced version has its "Add New Version" button disabled (its
+// Edit action is a link, which has no :disabled state).
+const isReplacedBundleRow = (tr) => Cypress.$(tr)
+  .find(':is([title="Add New Version"],[aria-label="Add New Version"]) button:disabled').length === 1;
 const attachedRows = () => attachedPanel().find('tbody tr').filter((_, tr) => tr.innerText.includes(plan.code));
 
 describe('UAT Benefit plan - Contribution plans and bundles', () => {
@@ -306,24 +315,35 @@ describe('UAT Benefit plan - Contribution plans and bundles', () => {
       cy.clickSave('Save changes');
       expectMutationSucceeded(`Replace Contribution Plan Bundle - ${bundle.newName}`);
 
-      // One current version; with history, the replaced one is listed too.
+      // A replaced version stays listed, with "Add New Version" and "Edit" disabled
+      // (ContributionPlanBundleSearcher.isReplaced): both versions are rows of the
+      // bundle table. "Show History" lists the audit trail (one row per change), not versions.
       searchBundles(bundle.code);
-      rowsWith(bundle.code).should('have.length', 1);
+      rowsWith(bundle.code).should(($rows) => {
+        expect($rows, 'versions').to.have.length(2);
+        expect($rows.filter((_, tr) => isReplacedBundleRow(tr)), 'replaced version').to.have.length(1);
+        // The old version ends where the new one starts.
+        expect($rows.filter((_, tr) => hasDate(tr, newFrom)), 'rows showing the new version start').to.have.length(2);
+      });
       searchBundles(bundle.code, { showHistory: true });
-      rowsWith(bundle.code).should('have.length', 2);
-      // The old version ends where the new one starts.
-      rowsWith(bundle.code).should(($rows) => expect($rows.filter((_, tr) => hasDate(tr, newFrom))).to.have.length(2));
+      rowsWith(bundle.code).should('have.length.at.least', 2);
     });
 
     it('deletes a contribution plan bundle (OCM-247)', () => {
+      // OCM-245 left two versions: delete the current one.
       searchBundles(bundle.code);
-      rowsWith(bundle.code).should('have.length', 1);
-      rowButton(cy.contains('tbody tr', bundle.code), 'Delete').click({ force: true });
+      rowsWith(bundle.code).should('have.length', 2);
+      rowButton(rowsWith(bundle.code).filter((_, tr) => !isReplacedBundleRow(tr)), 'Delete').click({ force: true });
       cy.get('[role="dialog"]').should('contain.text', `Delete Contribution Plan Bundle ${bundle.newName}?`);
       confirmOk();
       expectMutationSucceeded(`Delete Contribution Plan Bundle - ${bundle.newName}`);
+      // Deleting a replacement unlinks the version it replaced, which is current again
+      // and can be versioned anew (core HistoryModel.delete).
       searchBundles(bundle.code);
-      rowsWith(bundle.code).should('have.length', 0);
+      rowsWith(bundle.code).should(($rows) => {
+        expect($rows, 'versions left').to.have.length(1);
+        expect(isReplacedBundleRow($rows[0]), 'previous version replaced').to.be.false;
+      });
       searchBundles(bundle.code, { showDeleted: true });
       rowsWith(bundle.code).should('have.length.at.least', 1);
     });
