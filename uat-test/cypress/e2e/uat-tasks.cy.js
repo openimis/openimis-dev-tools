@@ -107,19 +107,27 @@ const assignedTo = () => cy.contains('label', 'Assigned to').siblings('.MuiInput
 // without the value just typed.
 const FILTER_DEBOUNCE_MS = 1000;
 
-function searchAllTasks(fill) {
+// The filters of the All tasks searcher, as they appear in the Search request.
+const entityFilter = (entity) => `entityString_Icontains: "${entity}"`;
+const statusFilter = (status) => `status: ${status}`;
+
+// `filter` is a fragment only the Search request carries. An intercept stays active
+// until the end of the test, so aliasing every "task(" request would also alias the
+// unfiltered fetch of the next cy.visit, and the wait would return that stale answer
+// while the filtered search (scanned in Python on the server, OP-3332) still runs.
+function searchAllTasks(fill, filter) {
   cy.visit('/front/allTasks');
   cy.waitForSearcherLoaded();
   fill();
   cy.wait(FILTER_DEBOUNCE_MS); // eslint-disable-line cypress/no-unnecessary-waiting
-  cy.aliasGraphqlQuery('task(', 'allTaskSearch');
+  cy.aliasGraphqlQuery(filter, 'allTaskSearch');
   cy.contains('button', 'Search').click();
   cy.awaitSearcherRefresh('allTaskSearch');
   cy.waitForSearcherLoaded();
 }
 
 function openTask(entity) {
-  searchAllTasks(() => cy.enterMuiInput('Entity', entity));
+  searchAllTasks(() => cy.enterMuiInput('Entity', entity), entityFilter(entity));
   cy.contains('table tbody tr', entity, { timeout: TIMEOUTS.BACKEND_VALIDATION })
     .find('button:is([title="View details"],[aria-label="View details"])')
     .click({ force: true });
@@ -155,7 +163,7 @@ const decisionFab = (icon) => cy.contains('button.MuiFab-root', new RegExp(`^${i
 
 // Polls the task row on All tasks until it shows `status` (resolution is asynchronous).
 function waitForTaskRowStatus(entity, status, attempt = 1) {
-  searchAllTasks(() => cy.enterMuiInput('Entity', entity));
+  searchAllTasks(() => cy.enterMuiInput('Entity', entity), entityFilter(entity));
   cy.contains('table tbody tr', entity).then(($row) => {
     if ($row.text().includes(status)) return;
     if (attempt >= 6) throw new Error(`task ${entity}: status ${status} not reached (${$row.text()})`);
@@ -254,14 +262,14 @@ describe('Task approval', () => {
 
     // The seeded tasks guarantee rows in both statuses.
     ['RECEIVED', 'ACCEPTED'].forEach((status) => {
-      searchAllTasks(() => cy.chooseMuiSelect('Status', status));
+      searchAllTasks(() => cy.chooseMuiSelect('Status', status), statusFilter(status));
       checkColumn('Status', (statuses) => {
         expect(statuses, `${status} rows`).to.have.length.greaterThan(0);
         statuses.forEach((s) => expect(s).to.eq(status));
       });
     });
 
-    searchAllTasks(() => cy.enterMuiInput('Entity', entityOf(searchCode)));
+    searchAllTasks(() => cy.enterMuiInput('Entity', entityOf(searchCode)), entityFilter(entityOf(searchCode)));
     checkColumn('Entity', (entities) => {
       expect(entities, 'rows').to.have.length(1);
       expect(entities[0]).to.eq(entityOf(searchCode));
