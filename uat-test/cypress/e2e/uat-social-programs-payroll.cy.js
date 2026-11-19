@@ -100,9 +100,13 @@ function approveTask(entity, type) {
   cy.waitForSearcherLoaded();
   cy.enterMuiInput('Entity', entity);
   cy.wait(FILTER_DEBOUNCE_MS); // eslint-disable-line cypress/no-unnecessary-waiting
-  cy.aliasGraphqlQuery('task(', 'approveTaskSearch');
+  // Only the Search request carries the entity filter: aliasing every "task(" request would
+  // also alias other task queries of the page. The filtered search is scanned in Python on
+  // the server (OP-3332) and takes longer than other list queries.
+  cy.aliasGraphqlQuery(`entityString_Icontains: ${JSON.stringify(entity)}`, 'approveTaskSearch');
   cy.contains('button', 'Search').click();
-  cy.awaitSearcherRefresh('approveTaskSearch');
+  cy.wait('@approveTaskSearch', { timeout: TIMEOUTS.SERVER_RESULT, responseTimeout: TIMEOUTS.SERVER_RESULT * 3 });
+  cy.waitForSearcherLoaded();
   cy.get('table tbody tr', { timeout: TIMEOUTS.BACKEND_VALIDATION })
     .filter((_, tr) => tr.innerText.includes(type) && /RECEIVED|ACCEPTED/.test(tr.innerText))
     .first()
@@ -112,7 +116,8 @@ function approveTask(entity, type) {
   cy.contains('label', 'Assigned to').siblings('.MuiInputBase-root').find('input')
     .click({ force: true })
     .type('any', { force: true });
-  cy.contains('[role="listbox"] li, li[role="option"]', '· any —', { timeout: TIMEOUTS.BACKEND_VALIDATION }).click({ force: true });
+  // The options come from a server search for what was typed.
+  cy.contains('[role="listbox"] li, li[role="option"]', '· any —', { timeout: TIMEOUTS.SERVER_RESULT }).click({ force: true });
   cy.clickSave();
   cy.waitForJournalProgress();
   cy.contains('button.MuiFab-root', /^check$/, { timeout: TIMEOUTS.BACKEND_VALIDATION }).should('not.be.disabled').click();
@@ -256,7 +261,8 @@ describe('Payrolls and projects of a program with active beneficiaries', () => {
 
     searchList('/front/payrollsReconciled', payrollName);
     cy.contains('table tbody tr', payrollName).contains('button', /View Reconciliation Files/i).click({ force: true });
-    cy.get('[role="dialog"]', { timeout: TIMEOUTS.BACKEND_VALIDATION }).should('contain', '.csv');
+    // The files dialog lists what the files query returns, behind the page's own queries.
+    cy.get('[role="dialog"]', { timeout: TIMEOUTS.SERVER_RESULT }).should('contain', '.csv');
     cy.get('[role="dialog"]').contains('button', /close/i).click();
 
     openReconciledSummary(payrollName);
