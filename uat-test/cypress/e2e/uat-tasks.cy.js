@@ -189,7 +189,7 @@ function searchTaskGroups(code, policy) {
   if (code) cy.enterMuiInput('Code', code);
   if (policy) cy.chooseMuiSelect('Policy Status', policy);
   cy.wait(FILTER_DEBOUNCE_MS); // eslint-disable-line cypress/no-unnecessary-waiting
-  cy.aliasGraphqlQuery('taskGroup(', 'taskGroupSearch');
+  cy.aliasNextGraphqlQuery('taskGroup(', 'taskGroupSearch');
   cy.contains('button', 'Search').click();
   cy.awaitSearcherRefresh('taskGroupSearch');
   cy.waitForSearcherLoaded();
@@ -367,7 +367,7 @@ describe('Task groups', () => {
 
     searchTaskGroups('');
     const sortByCode = (alias) => {
-      cy.aliasGraphqlQuery('taskGroup(', alias);
+      cy.aliasNextGraphqlQuery('taskGroup(', alias);
       cy.contains('table thead th', 'Code').click();
       cy.awaitSearcherRefresh(alias);
       cy.waitForSearcherLoaded();
