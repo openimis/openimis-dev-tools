@@ -432,7 +432,7 @@ describe('Programs list', () => {
     cy.assertJournalFirstEntryContains(`Delete program ${name}`);
     cy.assertJournalNoFail();
     // Collapse the journal drawer opened above: expanded, it covers the Search button.
-    cy.get('.MuiDrawer-paperAnchorRight button').first().click();
+    cy.get('.MuiDrawer-paperAnchorRight button, .MuiDrawer-anchorRight .MuiDrawer-paper button').first().click();
 
     // The list drops the deleted program once the deletion is done, without a new search;
     // "Show historical" still lists it.

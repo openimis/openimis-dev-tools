@@ -193,6 +193,11 @@ describe('UAT Accounting - Payments', () => {
     cy.waitForSearcherLoaded();
     cy.contains('tbody tr', kept).should('exist');
     cy.contains('tbody tr', removed).should('not.exist');
+    // Narrowed to this run's payments: those of earlier runs the same day share the
+    // received date and can push the deleted one off the first page.
+    typeIn('Receipt No', `UATP${runId}`);
+    cy.contains('button', 'Search').click({ force: true });
+    cy.waitForSearcherLoaded();
     resultCount(/payment\(s\) found/).then((current) => {
       cy.contains('label', 'Show historical values').click();
       cy.contains('button', 'Search').click({ force: true });

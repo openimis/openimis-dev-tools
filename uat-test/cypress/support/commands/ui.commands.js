@@ -24,6 +24,15 @@ export function registerUiCommands() {
       .first();
     field().clear({ force: true });
     field().type(value, { force: true, delay: 0 });
+    // A form that resets its fields once its record (re)loads can restore the old text
+    // between the clear and the typing, which then appends to it: type again then.
+    field().then(($input) => {
+      const actual = String($input.val());
+      if (actual !== String(value) && actual.endsWith(String(value))) {
+        field().clear({ force: true });
+        field().type(value, { force: true, delay: 0 });
+      }
+    });
   });
 
   Cypress.Commands.add('chooseMuiSelect', (label, value) => {
@@ -142,14 +151,17 @@ export function registerUiCommands() {
         ? {
           // v7 popper — single settled header label, no transition duplication.
           scope: '.MuiPickerPopper-root',
-          open: () => cy.wrap($wrap).find('button[aria-label^="Choose date"]').click(),
+          // Found again rather than through $wrap: the form may re-render the field
+          // (and detach $wrap) once its record has loaded.
+          open: () => fieldLabel(label, options).parent().find('button[aria-label^="Choose date"]').click(),
           headerText: '.MuiPickersCalendarHeader-label',
           prev: '.MuiPickersArrowSwitcher-previousIconButton',
           next: '.MuiPickersArrowSwitcher-nextIconButton',
           yearSwitch: '.MuiPickersCalendarHeader-switchViewButton',
           yearSample: '.MuiYearCalendar-root button',
-          dayCell: '.MuiDayCalendar-weekContainer .MuiPickersDay-root',
-          hiddenDay: '.MuiPickersDay-hiddenDaySpacingFiller, .MuiPickersDay-dayOutsideMonth',
+          // MUI X 8 / 9 (PickersDay was renamed PickerDay)
+          dayCell: '.MuiDayCalendar-weekContainer .MuiPickersDay-root, .MuiDayCalendar-weekContainer .MuiPickerDay-root',
+          hiddenDay: '.MuiPickersDay-hiddenDaySpacingFiller, .MuiPickersDay-dayOutsideMonth, .MuiPickerDay-fillerCell, .MuiPickerDay-dayOutsideMonth',
           disabledDay: '.Mui-disabled',
           settleSelector: null,
           ok: null,
@@ -186,25 +198,27 @@ export function registerUiCommands() {
       };
 
       cfg.open();
-      cy.get(`${cfg.scope} ${cfg.headerText}`).should('be.visible');
+      // .last(): while the month or year changes, the header's fade transition keeps the
+      // outgoing label (opacity 0, then detached) before the incoming one.
+      cy.get(`${cfg.scope} ${cfg.headerText}`).last().should('be.visible');
       waitForSettle();
 
       // Year jump (if needed). v3 preserves the viewed month after a year
       // pick, so the month-stepping loop below still works from the same
       // starting month.
-      cy.get(`${cfg.scope} ${cfg.headerText}`).invoke('text').then((txt) => {
+      cy.get(`${cfg.scope} ${cfg.headerText}`).last().invoke('text').then((txt) => {
         const shownYearStr = txt.trim().split(/\s+/).pop();
         if (+shownYearStr !== year) {
           cy.get(`${cfg.scope} ${cfg.yearSwitch}`).click();
           cy.contains(`${cfg.scope} ${cfg.yearSample}`, new RegExp(`^${year}$`)).click();
-          cy.get(`${cfg.scope} ${cfg.headerText}`).should('contain.text', String(year));
+          cy.get(`${cfg.scope} ${cfg.headerText}`).last().should('contain.text', String(year));
           waitForSettle();
         }
       });
 
       // Compute month delta from the settled header, then click N times
       // waiting for settle between clicks.
-      cy.get(`${cfg.scope} ${cfg.headerText}`).invoke('text').then((txt) => {
+      cy.get(`${cfg.scope} ${cfg.headerText}`).last().invoke('text').then((txt) => {
         const shownMonthName = txt.trim().split(/\s+/)[0];
         const shownMonth = MONTHS.indexOf(shownMonthName);
         if (shownMonth < 0) {
@@ -220,7 +234,7 @@ export function registerUiCommands() {
       });
 
       // Assert we landed on the target month before picking the day.
-      cy.get(`${cfg.scope} ${cfg.headerText}`)
+      cy.get(`${cfg.scope} ${cfg.headerText}`).last()
         .should('contain.text', `${MONTHS[month]} ${year}`);
 
       cy.get(`${cfg.scope} ${cfg.dayCell}`)
@@ -402,8 +416,10 @@ export function registerUiCommands() {
       .siblings('.MuiInputBase-root')
       .find(inputTag)
       .first()
-      .invoke('val')
-      .then((actualValue) => {
+      // Retried until it matches: a form fills its fields a commit or two after the
+      // record is loaded, and a single read can see the field still empty.
+      .should(($input) => {
+        const actualValue = $input.val();
         // Amount/quantity fields render decimals ("50.00"): compare numbers as numbers.
         const numeric = (v) => String(v).trim() !== '' && !Number.isNaN(Number(String(v).replace(/,/g, '')));
         if (numeric(actualValue) && numeric(expectedValue)) {
@@ -431,9 +447,9 @@ export function registerUiCommands() {
     cy.contains('label', label, { matchCase: false })
       .siblings('.MuiInputBase-root')
       .find('input')
-      .invoke('val')
-      .then((actualValue) => {
-        expect(String(actualValue).toLowerCase()).to.eq(String(expectedValue).toLowerCase());
+      // Retried until it matches, as verifyMuiInputValue.
+      .should(($input) => {
+        expect(String($input.val()).toLowerCase()).to.eq(String(expectedValue).toLowerCase());
       });
   });
 

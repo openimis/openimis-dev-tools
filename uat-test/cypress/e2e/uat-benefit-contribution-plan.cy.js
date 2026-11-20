@@ -71,8 +71,8 @@ const pickDateIn = (scope, label, date) => {
     step(n + 1);
   });
   step();
-  cy.get('.MuiPickerPopper-root .MuiPickersDay-root')
-    .not('.MuiPickersDay-dayOutsideMonth')
+  cy.get('.MuiPickerPopper-root .MuiPickersDay-root, .MuiPickerPopper-root .MuiPickerDay-root') // MUI X 8 / 9
+    .not('.MuiPickersDay-dayOutsideMonth, .MuiPickerDay-dayOutsideMonth')
     .contains(new RegExp(`^${date.getDate()}$`))
     .click({ force: true, waitForAnimations: false });
   cy.get('.MuiPickerPopper-root').should('not.exist');

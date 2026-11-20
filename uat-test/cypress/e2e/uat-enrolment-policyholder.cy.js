@@ -141,8 +141,8 @@ const pickDate = (scope, label, date) => {
   });
   step();
   cy.get(header).should('have.text', target);
-  cy.get('.MuiPickerPopper-root .MuiPickersDay-root')
-    .not('.MuiPickersDay-dayOutsideMonth, .MuiPickersDay-hiddenDaySpacingFiller')
+  cy.get('.MuiPickerPopper-root .MuiPickersDay-root, .MuiPickerPopper-root .MuiPickerDay-root') // MUI X 8 / 9
+    .not('.MuiPickersDay-dayOutsideMonth, .MuiPickersDay-hiddenDaySpacingFiller, .MuiPickerDay-dayOutsideMonth, .MuiPickerDay-fillerCell')
     .contains(new RegExp(`^${date.getDate()}$`)).click({ force: true });
   cy.get('.MuiPickerPopper-root').should('not.exist');
 };
@@ -317,7 +317,7 @@ describe('UAT Enrolment - Policy holders', () => {
       cy.assertJournalFirstEntryContains(`Delete Contribution Plan Bundle from ${ph.code}`);
       cy.assertJournalNoFail();
       // Collapse the journal drawer opened above: expanded, it covers the filter checkbox.
-      cy.get('.MuiDrawer-paperAnchorRight button').first().click();
+      cy.get('.MuiDrawer-paperAnchorRight button, .MuiDrawer-anchorRight .MuiDrawer-paper button').first().click();
       cy.contains('button', 'Search').click({ force: true });
       searcherTitle(/0 Contribution Plan Bundles Found/).should('exist');
       cy.contains('label', 'Show Deleted Contribution Plan Bundles').click();
