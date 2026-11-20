@@ -12,6 +12,11 @@ export function registerGrievanceCommands() {
     const attempt = () => cy.get('body', { log: false }).then(($body) => {
       const $close = saved($body).find('button').filter((_, b) => /^close$/i.test(b.textContent.trim()));
       if ($close.length) {
+        // The journal announces each finished mutation in a popover for 3 s, often just
+        // after this dialog opens; its invisible modal backdrop swallows clicks. Another
+        // spec's mutation finishing restarts it, so under a parallel run it can outlast
+        // the click's retries: wait for it to close, as a user would have to.
+        cy.get('.MuiPopover-root', { timeout: TIMEOUTS.SERVER_RESULT }).should('not.exist');
         cy.wrap($close.first()).click();
         cy.get('body').should(($b) => expect(saved($b).length, '"Grievance saved" closed').to.eq(0));
         return;
@@ -127,7 +132,7 @@ export function registerGrievanceCommands() {
     // The label is "Create Ticket {label}" with the ticket code, which a new ticket does
     // not have yet (TicketPage.jsx): the entry reads only "Create Ticket".
     cy.closeGrievanceSavedDialog();
-    cy.get('ul.MuiList-root li').first().should('contain.text', 'Create Ticket');
+    cy.journalEntryOfLastMutation(($entry) => expect($entry).to.contain('Create Ticket'));
     cy.contains('Failed to create').should('not.exist');
   });
 
@@ -198,9 +203,8 @@ export function registerGrievanceCommands() {
     cy.closeGrievanceSavedDialog();
 
     // Check journal for success
-    cy.get('ul.MuiList-root li').first().click();
     // The journal label is "Update Ticket <code>" (fe-grievance_social_protection 1691545).
-    cy.contains('Update Ticket', { timeout: TIMEOUTS.SERVER_RESULT }).should('exist');
+    cy.journalEntryOfLastMutation(($entry) => expect($entry).to.contain('Update Ticket'));
     cy.contains('Failed to update').should('not.exist');
   });
 
@@ -216,8 +220,7 @@ export function registerGrievanceCommands() {
     cy.closeGrievanceSavedDialog();
 
     // Check journal for success
-    cy.get('ul.MuiList-root li').first().click();
-    cy.contains('Resolve Ticket using comment', { timeout: TIMEOUTS.SERVER_RESULT }).should('exist');
+    cy.journalEntryOfLastMutation(($entry) => expect($entry).to.contain('Resolve Ticket using comment'));
     cy.contains('Failed').should('not.exist');
   });
 
@@ -230,9 +233,10 @@ export function registerGrievanceCommands() {
     cy.waitForJournalProgress();
     cy.closeGrievanceSavedDialog();
 
-    cy.get('ul.MuiList-root li').first().click();
+    cy.journalEntryOfLastMutation(($entry) => expect($entry).to.contain('Reopen Ticket'));
     cy.contains('Failed').should('not.exist');
-    // The click opens the entry's popover; its invisible backdrop would cover the page.
+    // The journal announces a finished mutation in a popover; its invisible backdrop
+    // would cover the page.
     const popoverBackdrop = '.MuiModal-backdrop.MuiBackdrop-invisible';
     cy.get('body').then(($body) => {
       const $backdrop = $body.find(popoverBackdrop);
