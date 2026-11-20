@@ -257,13 +257,12 @@ export function registerUiCommands() {
   // <input> behind aria-hidden and renders the value as spans in
   // .MuiPickersSectionList-root; read that when present, else the input.
   Cypress.Commands.add('assertMuiDatePickerValue', (label, value, options = {}) => {
-    fieldLabel(label, options).parent().then(($wrap) => {
+    // One retried assertion on a fresh query: MUI X 9 replaces the field's section
+    // list when the loaded entity arrives, detaching an element found earlier.
+    fieldLabel(label, options).parent().should(($wrap) => {
       const $sections = $wrap.find('.MuiPickersSectionList-root');
-      if ($sections.length) {
-        cy.wrap($sections).should('have.text', value);
-      } else {
-        cy.wrap($wrap).find('input').first().should('have.value', value);
-      }
+      const shown = $sections.length ? $sections.first().text() : $wrap.find('input').first().val();
+      expect(shown, `${label} value`).to.eq(value);
     });
   });
 
