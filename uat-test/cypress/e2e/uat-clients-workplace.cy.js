@@ -82,10 +82,12 @@ describe('Language selection', () => {
 
     openAccountMenu();
     cy.get('[role="menu"]').within(() => {
-      // The profile module's entries read "My Profile" and "Change Password".
-      cy.contains('li', /^\s*My profile\s*$/i);
-      cy.contains('li', /^\s*Change password\s*$/i);
-      cy.contains('li', 'Impersonate user');
+      // fe-core's default profile dropdown: "My profile" and "Change password" are links
+      // (<a role="menuitem">), not <li>, so match the menu items by role. Their text starts
+      // with the icon's ligature name (material symbols font), so anchor the label at the end.
+      cy.contains('[role="menuitem"]', /My profile\s*$/i);
+      cy.contains('[role="menuitem"]', /Change password\s*$/i);
+      cy.contains('[role="menuitem"]', 'Impersonate user');
       cy.get('hr, li.MuiDivider-root').should('exist');
     });
     languageItem('English').should('have.class', 'Mui-selected');
@@ -192,13 +194,15 @@ describe('Profile', () => {
     cy.enterMuiInput('Confirm New Password', user.newPassword);
     cy.contains('button', 'Submit').should('not.be.disabled').click();
 
-    cy.location('pathname', { timeout: TIMEOUTS.BACKEND_VALIDATION }).should('match', /^\/front\/?(home)?$/);
-    cy.contains(welcome);
-    cy.waitForJournalProgress();
-    cy.assertJournalFirstEntryContains('Change password');
-    cy.assertJournalNoFail();
+    // A password change ends every session of the user, this one included: core's
+    // set_password regenerates the user's private_key, which signs their JWTs, so every
+    // token issued before is refused and the app falls back to the login page. The
+    // journal entry went with that session (changePassword runs inline and keeps no
+    // MutationLog): the change is checked by logging in with the new password, then
+    // being refused with the old one.
+    cy.location('pathname', { timeout: TIMEOUTS.BACKEND_VALIDATION }).should('eq', '/front/login');
+    cy.get('input[type="password"]').should('be.visible');
 
-    cy.logout();
     loginAs(user.username, user.newPassword, welcome);
     cy.logout();
     loginAs(user.username, user.password);

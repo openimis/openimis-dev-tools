@@ -57,11 +57,14 @@ const ACTIVE_CRITERIA = { advanced_criteria: { ACTIVE: [{ type: 'boolean', field
 
 function searchList(route, name) {
   cy.visit(route);
-  cy.contains('Payrolls Found', { timeout: TIMEOUTS.BACKEND_VALIDATION });
+  cy.contains('Payrolls Found', { timeout: TIMEOUTS.SERVER_RESULT });
   cy.waitForSearcherLoaded();
   cy.enterMuiInput('Name', name);
   cy.wait(FILTER_DEBOUNCE_MS); // eslint-disable-line cypress/no-unnecessary-waiting
-  cy.aliasGraphqlQuery('payroll(', 'payrollListSearch');
+  // Only the query filtered on this name: Search is debounced, so an earlier list query
+  // could satisfy the wait and the filtered one then reload the rows under the next step
+  // (it closed the reconciliation summary dialog opened from a row).
+  cy.aliasGraphqlQuery(`name_Icontains: ${JSON.stringify(name)}`, 'payrollListSearch');
   cy.contains('button', 'Search').click();
   cy.awaitSearcherRefresh('payrollListSearch');
   cy.waitForSearcherLoaded();
@@ -71,7 +74,9 @@ function openPayroll(name) {
   searchList('/front/payrolls', name);
   cy.contains('table tbody tr', name).find('button.MuiIconButton-root').first().click({ force: true });
   cy.url().should('match', /\/payrolls\/payroll\/.+/);
-  cy.assertMuiInput('Name', name);
+  // The fields fill in once the payroll is fetched, which takes seconds with hundreds of benefits.
+  cy.contains('label', 'Name').siblings('.MuiInputBase-root').find('input', { timeout: TIMEOUTS.SERVER_RESULT })
+    .should('have.value', name);
 }
 
 const payrollStatus = () => cy.contains('label', /^Status$/).siblings('.MuiInputBase-root').find('input');
@@ -95,9 +100,13 @@ function approveTask(entity, type) {
   cy.waitForSearcherLoaded();
   cy.enterMuiInput('Entity', entity);
   cy.wait(FILTER_DEBOUNCE_MS); // eslint-disable-line cypress/no-unnecessary-waiting
-  cy.aliasGraphqlQuery('task(', 'approveTaskSearch');
+  // Only the Search request carries the entity filter: aliasing every "task(" request would
+  // also alias other task queries of the page. The filtered search is scanned in Python on
+  // the server (OP-3332) and takes longer than other list queries.
+  cy.aliasGraphqlQuery(`entityString_Icontains: ${JSON.stringify(entity)}`, 'approveTaskSearch');
   cy.contains('button', 'Search').click();
-  cy.awaitSearcherRefresh('approveTaskSearch');
+  cy.wait('@approveTaskSearch', { timeout: TIMEOUTS.SERVER_RESULT, responseTimeout: TIMEOUTS.SERVER_RESULT * 3 });
+  cy.waitForSearcherLoaded();
   cy.get('table tbody tr', { timeout: TIMEOUTS.BACKEND_VALIDATION })
     .filter((_, tr) => tr.innerText.includes(type) && /RECEIVED|ACCEPTED/.test(tr.innerText))
     .first()
@@ -107,12 +116,16 @@ function approveTask(entity, type) {
   cy.contains('label', 'Assigned to').siblings('.MuiInputBase-root').find('input')
     .click({ force: true })
     .type('any', { force: true });
-  cy.contains('[role="listbox"] li, li[role="option"]', '· any —', { timeout: TIMEOUTS.BACKEND_VALIDATION }).click({ force: true });
+  // The options come from a server search for what was typed.
+  cy.contains('[role="listbox"] li, li[role="option"]', '· any —', { timeout: TIMEOUTS.SERVER_RESULT }).click({ force: true });
   cy.clickSave();
   cy.waitForJournalProgress();
   cy.contains('button.MuiFab-root', /^check$/, { timeout: TIMEOUTS.BACKEND_VALIDATION }).should('not.be.disabled').click();
   cy.get('[role="dialog"]').contains('button', 'Ok').click();
   cy.get('[role="dialog"]').should('not.exist');
+  // The resolve mutation leaves once the dialog is answered: leaving the page at once
+  // (the next step visits another one) cancels the request before it reaches the server.
+  cy.waitForSentMutations();
 }
 
 function createActiveCycle(code) {
@@ -213,15 +226,19 @@ describe('Payrolls and projects of a program with active beneficiaries', () => {
 
     // OP-3279: the payroll page tells about the pending acceptance task.
     openPayroll(payrollName);
-    cy.contains('.MuiChip-root', '1 pending task', { timeout: TIMEOUTS.BACKEND_VALIDATION }).should('be.visible');
+    // openPayroll scrolled the Name field into view, which leaves the chip above it outside
+    // the page's scrolling container: bring it back before asserting it is visible.
+    cy.contains('.MuiChip-root', '1 pending task', { timeout: TIMEOUTS.SERVER_RESULT }).scrollIntoView()
+      .should('be.visible');
 
     searchList('/front/payrollsPending', payrollName);
     cy.contains('table tbody tr', payrollName).should('exist');
 
     approveTask(payrollName, 'accept_payroll');
+    // The approval is applied once the task is resolved, not when the save answers.
+    waitForPayrollStatus(payrollName, PAYROLL_STATUS.APPROVE_FOR_PAYMENT);
     searchList('/front/payrollsApproved', payrollName);
     cy.contains('table tbody tr', payrollName).should('exist');
-    waitForPayrollStatus(payrollName, PAYROLL_STATUS.APPROVE_FOR_PAYMENT);
 
     // No task is pending any more once the payroll is accepted.
     openPayroll(payrollName);
@@ -244,12 +261,14 @@ describe('Payrolls and projects of a program with active beneficiaries', () => {
 
     searchList('/front/payrollsReconciled', payrollName);
     cy.contains('table tbody tr', payrollName).contains('button', /View Reconciliation Files/i).click({ force: true });
-    cy.get('[role="dialog"]', { timeout: TIMEOUTS.BACKEND_VALIDATION }).should('contain', '.csv');
+    // The files dialog lists what the files query returns, behind the page's own queries.
+    cy.get('[role="dialog"]', { timeout: TIMEOUTS.SERVER_RESULT }).should('contain', '.csv');
     cy.get('[role="dialog"]').contains('button', /close/i).click();
 
     openReconciledSummary(payrollName);
     cy.get('@benefitCount').then((count) => {
-      cy.get('[role="dialog"]').should('contain', `${count - 1} of ${count}`);
+      // The counts fill in once the payroll and its benefits are fetched (about 4 s).
+      cy.get('[role="dialog"]', { timeout: TIMEOUTS.SERVER_RESULT }).should('contain', `${count - 1} of ${count}`);
     });
     cy.get('[role="dialog"]').should('contain', 'Total Amount for Invoice').and('contain', 'Total Delivered Per Reconciliation');
     cy.get('[role="dialog"]').contains('button', /^close$/i).click();
@@ -265,9 +284,13 @@ describe('Payrolls and projects of a program with active beneficiaries', () => {
     openReconciledSummary(payrollName);
     cy.get('[role="dialog"]').contains('button', 'Create Payment For Failed Invoice').should('not.be.disabled').click();
     cy.url().should('include', 'createPayrollFromFailedInvoices');
+    // The form takes the reconciled payroll once it is fetched (about 4 s): its benefit plan
+    // field only shows then.
+    cy.contains('label', 'Benefit Plan', { timeout: TIMEOUTS.SERVER_RESULT });
     cy.assertMuiInput('Name', '');
     cy.contains('label', 'Payment Cycle').siblings('.MuiInputBase-root').find('input').should('have.value', '');
-    cy.contains('label', 'Payment Plan').siblings('.MuiInputBase-root').should('contain', planCode);
+    // Read-only here: fe-core SelectInput then shows the plan in an input's value, not as text.
+    cy.assertMuiSelectValue('Payment Plan', planCode);
 
     cy.enterMuiInput('Name', failedPayrollName);
     cy.chooseMuiAutocomplete('Payment Cycle', failedCycleCode);
@@ -324,10 +347,11 @@ describe('Payrolls and projects of a program with active beneficiaries', () => {
     cy.contains(/[1-9]\d* Beneficiaries Assigned/, { timeout: TIMEOUTS.BACKEND_VALIDATION });
     cy.contains('button', 'Enter time').click();
     cy.get('table input[placeholder^="Work Day"]').should('have.length.at.least', 2);
-    cy.get('table tbody tr').first().find('input[placeholder^="Work Day"]').should('have.length', 3);
+    // The page's first table is the "Beneficiaries Assigned" summary: keep the rows being edited.
+    const timeRows = () => cy.get('table tbody tr').filter((_, tr) => tr.querySelector('input[placeholder^="Work Day"]'));
+    timeRows().first().find('input[placeholder^="Work Day"]').should('have.length', 3);
 
-    const day1 = (row) => cy.get('table tbody tr').filter((_, tr) => tr.querySelector('input[placeholder^="Work Day"]')).eq(row)
-      .find('input[placeholder="Work Day 1"]');
+    const day1 = (row) => timeRows().eq(row).find('input[placeholder="Work Day 1"]');
     day1(0).type('{selectall}50', { force: true });
     day1(1).type('{selectall}150', { force: true });
     cy.contains('button', 'Save').click();

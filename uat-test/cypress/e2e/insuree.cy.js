@@ -105,29 +105,50 @@ const verifyInsureeDetails = (insuree, updatedData = null) => {
   cy.verifyMuiDatePickerValue('Birth Date', formatDate(insuree.dob));
 };
 
-const deleteInsuree = (insuree, { failIfMissing = true } = {}) => {
-  goToInsureeList();
-  cy.enterMuiInput('Insurance No.', insuree.chfId, 'input');
-  cy.contains('button', 'Search').click();
-  cy.scrollTo('right', { ensureScrollable: false });
+// Clean-up decides from the API whether there is something to delete, not from the
+// searcher: right after "Search" the table still shows the previous results, and reading
+// it there skipped every delete without a word (each run left its member insuree behind).
+const gqlCount = (query, field) => cy
+  .request({ method: 'POST', url: '/api/graphql', body: { query }, log: false })
+  .then(({ body }) => {
+    if (body.errors?.length) throw new Error(`GraphQL error: ${JSON.stringify(body.errors)}`);
+    return body.data[field].totalCount;
+  });
+const countInsurees = (chfId) => gqlCount(`{ insurees(chfId: "${chfId}") { totalCount } }`, 'insurees');
+const countFamilies = (headChfId) => gqlCount(`{ families(headInsuree_ChfId: "${headChfId}") { totalCount } }`, 'families');
 
-  cy.get('body').then(($body) => {
-    const exists = $body.find('tr').toArray().some(row =>
-      row.innerText.includes(insuree.chfId)
-    );
-
-    if (!exists) {
-      if (!failIfMissing) {
-        cy.log(`Insuree ${insuree.chfId} not found`);
-        return;
-      }
-      throw new Error(`Insuree ${insuree.chfId} not found`);
+// Deletes through the UI what the API lists, then checks through the API that it is gone.
+// Nothing to delete is an error unless failIfMissing is false (clean-up after a test that
+// may have stopped before creating it), and is logged either way.
+const deleteThroughList = ({ what, count, openList, search, rowText, confirm }, { failIfMissing }) => {
+  count().then((existing) => {
+    if (!existing) {
+      if (failIfMissing) throw new Error(`${what} not found`);
+      cy.log(`${what} does not exist: nothing to delete`);
+      return;
     }
-
-    cy.clickRowAction(insuree.chfId, 'Delete');
-    cy.contains('button', 'OK').click();
+    openList();
+    search();
+    cy.scrollTo('right', { ensureScrollable: false });
+    cy.waitForSearcherLoaded();
+    cy.clickRowAction(rowText, 'Delete');
+    cy.contains('[role="dialog"] button', confirm, { matchCase: false }).click();
+    cy.waitForJournalProgress();
+    count().then((left) => expect(left, `${what} left after its delete`).to.eq(0));
   });
 };
+
+const deleteInsuree = (insuree, { failIfMissing = true } = {}) => deleteThroughList({
+  what: `Insuree ${insuree.chfId}`,
+  count: () => countInsurees(insuree.chfId),
+  openList: goToInsureeList,
+  search: () => {
+    cy.enterMuiInput('Insurance No.', insuree.chfId, 'input');
+    cy.contains('button', 'Search').click();
+  },
+  rowText: insuree.chfId,
+  confirm: 'Ok',
+}, { failIfMissing });
 
 // ------------------ FAMILY ------------------
 const goToFamilyList = () => goToSubMenu('Insurees and Policies', 'Families/Group');
@@ -195,29 +216,17 @@ const removeFamilyMember = (head, member) => {
   cy.contains('button', /^Remove and cancel policies$/i).click();
 };
 
-const deleteFamily = (head, { failIfMissing = true } = {}) => {
-  goToFamilyList();
-  cy.enterMuiInput('Head Ins. No.', head.chfId, 'input');
-  cy.contains('button', 'Search').click();
-  cy.scrollTo('right', { ensureScrollable: false });
-
-  cy.get('body').then(($body) => {
-    const exists = $body.find('tr').toArray().some(row =>
-      row.innerText.includes(head.chfId)
-    );
-
-    if (!exists) {
-      if (!failIfMissing) {
-        cy.log(`Family ${head.chfId} not found`);
-        return;
-      }
-      throw new Error(`Family ${head.chfId} not found`);
-    }
-
-    cy.clickRowAction(head.chfId, 'Delete');
-    cy.contains('button', 'Delete family and members').click();
-  });
-};
+const deleteFamily = (head, { failIfMissing = true } = {}) => deleteThroughList({
+  what: `Family of ${head.chfId}`,
+  count: () => countFamilies(head.chfId),
+  openList: goToFamilyList,
+  search: () => {
+    cy.enterMuiInput('Head Ins. No.', head.chfId, 'input');
+    cy.contains('button', 'Search').click();
+  },
+  rowText: head.chfId,
+  confirm: 'Delete family and members',
+}, { failIfMissing });
 
 const verifyFamilyMemberRemoved = (head, member) => {
   goToExistingFamilyForm(head);

@@ -29,10 +29,27 @@ export function registerSearcherCommands() {
     });
   });
 
+  // Like `aliasGraphqlQuery`, but aliases only the first matching request sent after it is
+  // registered. An intercept stays active until the end of the test: a plain alias on a
+  // fragment every list query carries (e.g. "taskGroup(") also catches the unfiltered fetch
+  // of the next cy.visit, and a later wait on it returns that stale answer instead of the
+  // Search or sort request. Use it when no filter fragment tells the wanted request apart.
+  Cypress.Commands.add('aliasNextGraphqlQuery', (queryFragment, alias) => {
+    let armed = true;
+    cy.intercept('POST', '/api/graphql', (req) => {
+      if (armed && typeof req.body?.query === 'string' && req.body.query.includes(queryFragment)) {
+        armed = false;
+        req.alias = alias;
+      }
+    });
+  });
+
   // Wait for the aliased GraphQL fetch to return, then (optionally) confirm
   // the results title is re-rendered.  Pairs with `aliasGraphqlQuery`.
+  // A list query is a server round trip: on a database grown by many runs, or while
+  // the server answers other requests of the page, it takes more than 5 s.
   Cypress.Commands.add('awaitSearcherRefresh', (alias, resultsTextOrRegex) => {
-    cy.wait(`@${alias}`, { timeout: TIMEOUTS.BACKEND_VALIDATION });
+    cy.wait(`@${alias}`, { timeout: TIMEOUTS.SERVER_RESULT });
     if (resultsTextOrRegex) {
       cy.contains(resultsTextOrRegex, { timeout: TIMEOUTS.BACKEND_VALIDATION })
         .should('be.visible');

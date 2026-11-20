@@ -44,17 +44,19 @@ export function registerFormCommands() {
     cy.waitForSentMutations({ timeout: TIMEOUTS.BACKEND_VALIDATION });
   });
 
-  // Open the journal drawer (if not already open) and assert its first entry.
+  // Open the journal drawer and assert the entry of the last mutation the page sent.
+  // That entry is the first one only while no other spec uses the journal: all specs
+  // log in as the same user, so a parallel run lists their mutations too.
   Cypress.Commands.add('assertJournalFirstEntryContains', (text) => {
     cy.get('.MuiDrawer-paperAnchorRight button').first().click();
     // the entry is the mutation's: it shows once the server has answered
-    cy.get('ul.MuiList-root li', { timeout: TIMEOUTS.SERVER_RESULT }).first().should('contain', text);
+    cy.journalEntryOfLastMutation(($entry) => expect($entry).to.contain(text));
   });
 
-  // Assert that the first journal entry does NOT contain the given prefix.
-  // Typical use: assertJournalNoFail('Failed to create').
+  // Assert that the journal entry of the last mutation the page sent does NOT contain
+  // the given prefix. Typical use: assertJournalNoFail('Failed to create').
   Cypress.Commands.add('assertJournalNoFail', (prefix = 'Failed to') => {
-    cy.get('ul.MuiList-root li').first().should('not.contain', prefix);
+    cy.journalEntryOfLastMutation(($entry) => expect($entry).not.to.contain(prefix));
   });
 
   Cypress.Commands.add('clickCreate', (createTitle = 'Create') => {

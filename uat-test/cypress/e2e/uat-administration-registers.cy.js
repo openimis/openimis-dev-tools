@@ -15,8 +15,9 @@ import { baseline } from '../support/baseline';
 // same district — coherent). The officer extract uses officer r1d1 (district r1d1).
 
 const TIMEOUT = 5000;
-// register and claim uploads are processed by the backend before the result dialog opens
-const UPLOAD_TIMEOUT = 30000;
+// The result dialog opens at once with a spinner while the backend processes the upload:
+// a dry run of the whole insuree register takes about 20 s on the demo data.
+const UPLOAD_TIMEOUT = 60000;
 const REGISTERS_URL = '/front/tools/registers';
 const EXTRACTS_URL = '/front/tools/extracts';
 const downloadsFolder = () => Cypress.config('downloadsFolder');
@@ -68,8 +69,8 @@ function dryRunUpload(title, { contents, fileName, mimeType, confirmText }) {
   cy.get('[role="dialog"]').should('contain', confirmText);
   cy.get('[role="dialog"]').contains('button', 'Upload').click();
 
-  cy.contains('[role="dialog"]', 'Upload Register', { timeout: UPLOAD_TIMEOUT }).as('result');
-  cy.get('@result').find('[role="progressbar"]', { timeout: TIMEOUT }).should('not.exist');
+  cy.contains('[role="dialog"]', 'Upload Register', { timeout: TIMEOUT }).as('result');
+  cy.get('@result').find('[role="progressbar"]', { timeout: UPLOAD_TIMEOUT }).should('not.exist');
   cy.get('@result').should('contain', 'Success').and('contain', 'Sent:');
   cy.get('@result').contains('button', 'Ok').click();
   cy.contains('[role="dialog"]', 'Upload Register').should('not.exist');

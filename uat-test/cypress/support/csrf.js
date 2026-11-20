@@ -59,7 +59,10 @@ export function addCsrfToGraphqlRequests() {
     if (args.length !== 1 || !isGraphql(options) || hasCsrfHeader(options.headers)) {
       return originalFn(...args);
     }
-    return cy.window({ log: false }).then((win) => {
+    // A then() gets the default command timeout (5 s): give the wrapped request its own
+    // response timeout, or a mutation the server answers in 6 s fails as "never resolved".
+    // Twice: a CSRF refusal sends the request a second time.
+    return cy.window({ log: false }).then({ timeout: 2 * Cypress.config('responseTimeout') }, (win) => {
       const refreshAndSend = () => fetchToken(originalFn, options.url, win)
         .then((token) => originalFn(withToken(options, token)));
       const token = readToken(win);

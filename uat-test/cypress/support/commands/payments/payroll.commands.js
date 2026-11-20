@@ -1,6 +1,26 @@
 import { TIMEOUTS } from '../../constants';
 import { approvePendingTasksOf, gql, mutate } from '../../tasks-api';
 
+// The Payment Plan picker searches the server for what is typed: only the first page of
+// plans is loaded without a search, and a plan made by a spec is rarely in it. The option
+// shows up once that search has answered, which takes more than the 5 s default while the
+// page's other queries are running.
+const choosePaymentPlan = (text) => {
+  cy.intercept('POST', '/api/graphql', (req) => {
+    if (typeof req.body?.query === 'string' && req.body.query.includes('PaymentPlanPicker')
+      && req.body.variables?.search === text) {
+      req.alias = 'paymentPlanSearch';
+    }
+  });
+  cy.contains('label', 'Payment Plan')
+    .siblings('.MuiInputBase-root')
+    .find('input[role="combobox"]')
+    .clear({ force: true })
+    .type(text, { force: true });
+  cy.wait('@paymentPlanSearch', { timeout: TIMEOUTS.SERVER_RESULT });
+  cy.contains('[role="listbox"] li', text, { timeout: TIMEOUTS.SERVER_RESULT }).click({ force: true });
+};
+
 // Ids of the live payrolls with exactly this name.
 const livePayrollIds = (name) => gql(`{ payroll(name_Iexact: ${JSON.stringify(name)}, isDeleted: false) { edges { node { id } } } }`)
   .then((data) => data.payroll.edges.map((e) => atob(e.node.id).split(':')[1]));
@@ -57,6 +77,9 @@ export function registerPayrollCommands() {
     paymentMethod,
     paymentPointName,
   }) => {
+    // The fields fill in once the payroll is fetched, which takes longer with many benefits.
+    cy.contains('label', 'Name', { matchCase: false }).siblings('.MuiInputBase-root').find('input', { timeout: TIMEOUTS.SERVER_RESULT })
+      .should('have.value', name);
     cy.assertMuiInput('Name', name);
     if (status) {
       cy.assertMuiInput('Status', status);
@@ -89,7 +112,7 @@ export function registerPayrollCommands() {
 
   Cypress.Commands.add('openCreatePayroll', () => {
     cy.visit('/front/payrolls');
-    cy.contains('Payrolls Found');
+    cy.contains('Payrolls Found', { timeout: TIMEOUTS.SERVER_RESULT });
     cy.clickCreate();
     cy.url().should('include', '/payrolls/payroll');
   });
@@ -107,7 +130,7 @@ export function registerPayrollCommands() {
       cy.enterMuiInput('Name', name);
     }
     if (paymentPlanCode) {
-      cy.chooseMuiSelect('Payment Plan', [paymentPlanCode, paymentPlanName].join(' - '));
+      choosePaymentPlan([paymentPlanCode, paymentPlanName].join(' - '));
     }
     if (paymentCycleCode) {
       // PaymentCyclePicker is an Autocomplete — typing triggers the filtered query.
@@ -176,7 +199,7 @@ export function registerPayrollCommands() {
       cy.chooseMuiSelect('Status', status);
     }
     if (paymentPlanCode) {
-      cy.chooseMuiSelect('Payment Plan', paymentPlanCode);
+      choosePaymentPlan(paymentPlanCode);
     }
     if (paymentCycleCode) {
       cy.chooseMuiAutocomplete('Payment Cycle', paymentCycleCode);
@@ -386,13 +409,17 @@ export function registerPayrollCommands() {
       });
 
     cy.get('[role="dialog"]', { timeout: TIMEOUTS.BACKEND_VALIDATION }).should('be.visible');
+    // The button is enabled once the payroll query behind the summary has answered: about
+    // 4 s on a payroll of 518 benefits, longer while the page loads.
     cy.get('[role="dialog"]')
-      .contains('button', /Approve and Close/i)
+      .contains('button', /Approve and Close/i, { timeout: TIMEOUTS.SERVER_RESULT })
       .should('not.be.disabled')
       .click({ force: true });
 
-    // The mutation closes the dialog on success.
+    // The dialog closes itself before sending the close mutation: wait for that mutation,
+    // or the caller's next visit cancels the request before it reaches the server.
     cy.get('[role="dialog"]', { timeout: TIMEOUTS.BACKEND_VALIDATION }).should('not.exist');
+    cy.waitForSentMutations();
   });
 
   // Synchronous CSV parser/builder exposed as cy commands for chaining.
@@ -409,7 +436,8 @@ export function registerPayrollCommands() {
   Cypress.Commands.add('downloadReconciliationFromUI', () => {
     cy.intercept('GET', '/api/payroll/csv_reconciliation/*').as('downloadRecCsv');
     cy.contains('button', /^Download$/i).click({ force: true });
-    return cy.wait('@downloadRecCsv', { timeout: TIMEOUTS.BACKEND_VALIDATION }).then(({ response }) => {
+    // The template lists every benefit of the payroll: hundreds of rows take seconds.
+    return cy.wait('@downloadRecCsv', { responseTimeout: TIMEOUTS.SERVER_RESULT * 2 }).then(({ response }) => {
       expect(response.statusCode).to.eq(200);
       const csvText = typeof response.body === 'string'
         ? response.body
@@ -445,7 +473,12 @@ export function registerPayrollCommands() {
       .contains('button', /Upload Payment Data/i)
       .should('not.be.disabled')
       .click({ force: true });
-    cy.wait('@uploadRecCsv', { timeout: TIMEOUTS.BACKEND_VALIDATION }).then((interception) => {
+    // The server parses and applies the whole file before answering, saving each row on
+    // its own: about 0.13 s a row on the UAT stack, and the cohort grows with every run
+    // (225 rows took 30 s). Allow 250 ms a row, and never less than 30 s.
+    const rowCount = csvText.trim().split('\n').length - 1;
+    const responseTimeout = Math.max(TIMEOUTS.SERVER_RESULT * 2, rowCount * 250);
+    cy.wait('@uploadRecCsv', { responseTimeout }).then((interception) => {
       const status = interception?.response?.statusCode;
       if (status >= 400) {
         // Surface the BE error so a 500 doesn't fail with just "expected N to be below 400".
@@ -486,9 +519,11 @@ export function registerPayrollCommands() {
     // Re-scope each assertion to `[role="dialog"]` to dodge stale-DOM errors
     // when the dialog content re-renders between the title check and the
     // card checks.
+    // The counts come from the payroll query, which reads every benefit: the dialog shows
+    // "0 of 0" for about 4 s on a payroll of 518 benefits, longer while the page loads.
     if (expected.selected !== undefined && expected.total !== undefined) {
       cy.get('[role="dialog"]', { timeout: TIMEOUTS.BACKEND_VALIDATION })
-        .contains(`${expected.selected} of ${expected.total}`, { timeout: TIMEOUTS.BACKEND_VALIDATION })
+        .contains(`${expected.selected} of ${expected.total}`, { timeout: TIMEOUTS.SERVER_RESULT })
         .should('exist');
     }
     if (expected.totalAmount !== undefined) {
