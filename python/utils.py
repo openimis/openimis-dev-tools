@@ -1,3 +1,4 @@
+import argparse
 import urllib.request
 import re
 import os
@@ -115,6 +116,49 @@ def parse_npm_branch(npm_str):
         print("Error branch not found")
 
 
+def regex(pattern):
+    """argparse type for --filter: the pattern compiled, or a usage error."""
+    try:
+        return re.compile(pattern)
+    except re.error as e:
+        raise argparse.ArgumentTypeError(f"invalid regex {pattern!r}: {e}")
+
+
+def add_filter_argument(parser, required=False):
+    parser.add_argument('--filter', type=regex, metavar='REGEX', required=required,
+                        help='only process repos whose name matches REGEX (re.search, '
+                             'e.g. "_py", "be-(core|claim)_py")'
+                             + ('' if required else '; default is all repos'))
+    return parser
+
+
+def parse_filter_args(description=None, required=False):
+    """Command line of a script whose only option is --filter; returns the compiled filter."""
+    parser = argparse.ArgumentParser(description=description)
+    add_filter_argument(parser, required)
+    return parser.parse_args().filter
+
+
+def matches_filter(repo_name, repo_filter):
+    if repo_filter is None:
+        return True
+    if isinstance(repo_filter, str):
+        repo_filter = re.compile(repo_filter)
+    return repo_filter.search(repo_name) is not None
+
+
+def filter_repos(repos_name, repo_filter=None):
+    return [name for name in repos_name if matches_filter(name, repo_filter)]
+
+
+def matches_repos_filter(repo_name, filters):
+    """config.REPOS / --repos semantics: any comma-separated fragment, case-insensitive."""
+    if not filters:
+        return True
+    lowered = repo_name.lower()
+    return any(item.lower() in lowered for item in filters)
+
+
 def get_repos_name(ref_branch = 'develop'):
     g = Github(
             GITHUB_TOKEN,
@@ -146,7 +190,9 @@ def  create_pr_repo(repo, branches,from_branch, to_branch):
     if to_branch in branches and from_branch in branches:
         pr_id = create_pr(repo, from_branch, to_branch)
 
-def walk_config_be(g,be, callback):
+def walk_config_be(g,be, callback, repo_filter=None, skipped=None):
+    """skipped(module) gives the entry kept for a module left out by repo_filter;
+    by default its original definition."""
     res = []
     for module in be['modules']:
         module_name = parse_pip(module['pip'])
@@ -154,6 +200,10 @@ def walk_config_be(g,be, callback):
             if REPOS and module['name'] not in REPOS:
                 print(f"Using original definition for {module['name']} - not in REPOS list")
                 res.append(module)
+                continue
+            if not matches_filter(module_name, repo_filter):
+                print(f"Using original definition for {module['name']} - does not match --filter")
+                res.append(skipped(module) if skipped else module)
                 continue
             repo = g.get_repo(module_name)
             ref = parse_pip_branch(module['pip'])
@@ -165,7 +215,9 @@ def walk_config_be(g,be, callback):
                 res.append(r)
 
     return res
-def walk_config_fe(g,fe, callback):
+def walk_config_fe(g,fe, callback, repo_filter=None, skipped=None):
+    """skipped(module) gives the entry kept for a module left out by repo_filter;
+    by default its original definition."""
     res = []
 
     for module in fe['modules']:
@@ -180,6 +232,10 @@ def walk_config_fe(g,fe, callback):
                 continue
 
             repo_url = parse_npm_github(module['npm'])
+            if not matches_filter(repo_url or module_name, repo_filter):
+                print(f"Using original definition for {module['name']} - does not match --filter")
+                res.append(skipped(module) if skipped else module)
+                continue
             if repo_url:
                 repo = g.get_repo(repo_url)
                 ref = parse_npm_branch(module['npm'])
@@ -210,14 +266,14 @@ def flatten_json(y):
     flatten(y)
     return out  
             
-def for_repos(repos_name,from_branch, to_branch, callback):
+def for_repos(repos_name,from_branch, to_branch, callback, repo_filter=None):
     output = []
     g = Github(
             GITHUB_TOKEN,
             seconds_between_requests=0.75,
             seconds_between_writes=2.0
     )
-    for repo_name in repos_name:
+    for repo_name in filter_repos(repos_name, repo_filter):
         repo = g.get_repo(repo_name)
         branches = [x.name for x in list(repo.get_branches())]
         # check if release exists

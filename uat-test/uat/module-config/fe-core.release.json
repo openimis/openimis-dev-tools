@@ -1,0 +1,555 @@
+{
+  "menus": [
+    {
+      "position": 1,
+      "id": "ClientRegistry.MainMenu",
+      "name": "Clients",
+      "text": "Clients",
+      "icon": "Groups",
+      "entries": [
+        {
+          "type": "group",
+          "id": "ClientRegistry.group.individual",
+          "name": "Individual",
+          "text": "Individual",
+          "position": 1,
+          "entries": [
+            {
+              "position": 14,
+              "route": "groups"
+            },
+            {
+              "position": 13,
+              "route": "individuals"
+            },
+            {
+              "position": 1,
+              "id": "individual.api_imports",
+              "icon": "Publish"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "ClientRegistry.group.insuree",
+          "name": "Insuree",
+          "text": "Insuree",
+          "position": 11,
+          "entries": [
+            {
+              "position": 12,
+              "icon": "Group",
+              "route": "insuree/families"
+            },
+            {
+              "position": 11,
+              "icon": "GroupAdd",
+              "route": "insuree/family/new",
+              "text": "Add Family"
+            },
+            {
+              "position": 13,
+              "icon": "Person",
+              "route": "insuree/insurees"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "position": 2,
+      "id": "BenefitPlan.MainMenu",
+      "name": "Benefit Plan",
+      "text": "Benefit plan",
+      "icon": "Diversity_2",
+      "entries": [
+        {
+          "type": "group",
+          "id": "BenefitPlan.group.social-program",
+          "name": "Social Program",
+          "text": "Social Program",
+          "position": 2,
+          "entries": [
+            {
+              "position": 2,
+              "icon": "Spa",
+              "route": "benefitPlans"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "BenefitPlan.group.payment-plan",
+          "name": "Payment Plan",
+          "text": "Payment Plan",
+          "position": 5,
+          "entries": [
+            {
+              "position": 5,
+              "icon": "PriceChange",
+              "route": "paymentPlans"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "BenefitPlan.group.contribution-plan",
+          "name": "Contribution Plan",
+          "text": "Contribution Plan",
+          "position": 14,
+          "entries": [
+            {
+              "position": 14,
+              "route": "contributionPlans"
+            },
+            {
+              "position": 15,
+              "route": "contributionPlanBundles"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "BenefitPlan.group.product",
+          "name": "Product",
+          "text": "Product",
+          "position": 1,
+          "entries": [
+            {
+              "position": 1,
+              "icon": "Spa",
+              "route": "admin/products"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "BenefitPlan.group.providers",
+          "name": "Providers",
+          "text": "Providers",
+          "position": 3,
+          "entries": [
+            {
+              "position": 3,
+              "route": "location/healthFacilities"
+            },
+            {
+              "position": 4,
+              "route": "medical/pricelists/services"
+            },
+            {
+              "position": 5,
+              "route": "medical/pricelists/items"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "BenefitPlan.group.medical",
+          "name": "Medical",
+          "text": "Medical",
+          "position": 9,
+          "entries": [
+            {
+              "position": 9,
+              "route": "medical/medicalServices"
+            },
+            {
+              "position": 10,
+              "route": "medical/medicalItems"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "position": 3,
+      "id": "Enrolment.MainMenu",
+      "name": "Enrolment",
+      "text": "Enrolment",
+      "icon": "Shield",
+      "entries": [
+        {
+          "type": "group",
+          "id": "Enrolment.group.policyholder",
+          "name": "Policyholder",
+          "text": "Policyholder",
+          "position": 33,
+          "entries": [
+            {
+              "position": 33,
+              "icon": "Business",
+              "route": "policyHolders"
+            },
+            {
+              "position": 34,
+              "icon": "Business",
+              "route": "policyHolderUsers"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "Enrolment.group.contract",
+          "name": "Contract",
+          "text": "Contract",
+          "position": 1,
+          "entries": [
+            {
+              "position": 1,
+              "icon": "Contract",
+              "route": "contracts"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "Enrolment.group.policy",
+          "name": "Policy",
+          "text": "Policy",
+          "position": 3,
+          "entries": [
+            {
+              "position": 3,
+              "route": "policy/policies"
+            },
+            {
+              "position": 4,
+              "route": "contribution/contributions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "position": 4,
+      "id": "Benefit.MainMenu",
+      "name": "Benefits and claims",
+      "text": "Claims & Benefits",
+      "icon": "Payments",
+      "entries": [
+        {
+          "type": "group",
+          "id": "Benefit.group.claim",
+          "name": "Claim",
+          "text": "Claim",
+          "position": 1,
+          "entries": [
+            {
+              "position": 1,
+              "route": "claim/healthFacilities"
+            },
+            {
+              "position": 2,
+              "route": "claim/reviews"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "Benefit.group.claim-batch",
+          "name": "Claim Batch",
+          "text": "Claim Batch",
+          "position": 1,
+          "entries": [
+            {
+              "position": 1,
+              "route": "claim_batch"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "position": 5,
+      "id": "Accounting.MainMenu",
+      "name": "Accounting",
+      "text": "Accounting",
+      "icon": "Payments",
+      "entries": [
+        {
+          "type": "group",
+          "id": "Accounting.group.invoice",
+          "name": "Invoice",
+          "text": "Invoice",
+          "position": 51,
+          "entries": [
+            {
+              "position": 52,
+              "icon": "CorporateFare",
+              "route": "bills",
+              "text": "Supplier Invoices"
+            },
+            {
+              "position": 55,
+              "icon": "Receipt",
+              "route": "payment/paymentsInvoice",
+              "text": "Payments"
+            },
+            {
+              "position": 51,
+              "icon": "Receipt",
+              "route": "invoices",
+              "text": "Customer Invoices"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "Accounting.group.payroll",
+          "name": "Payroll",
+          "text": "Payroll",
+          "position": 11,
+          "entries": [
+            {
+              "position": 14,
+              "route": "payrollsReconciled"
+            },
+            {
+              "position": 13,
+              "route": "payrollsApproved"
+            },
+            {
+              "position": 12,
+              "route": "payrollsPending"
+            },
+            {
+              "position": 11,
+              "route": "payrolls"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "Accounting.group.payment-cycle",
+          "name": "Payment Cycle",
+          "text": "Payment Cycle",
+          "position": 5,
+          "entries": [
+            {
+              "position": 5,
+              "icon": "Timelapse",
+              "route": "paymentCycles"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "Accounting.group.payment-point",
+          "name": "Payment Point",
+          "text": "Payment Point",
+          "position": 20,
+          "entries": [
+            {
+              "position": 20,
+              "icon": "Store",
+              "route": "paymentPoints"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "Accounting.group.payer",
+          "name": "Payer",
+          "text": "Payer",
+          "position": 14,
+          "entries": [
+            {
+              "position": 14,
+              "icon": "Money",
+              "route": "payer/payers"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "Accounting.group.payment",
+          "name": "Payment",
+          "text": "Payment",
+          "position": 10,
+          "entries": [
+            {
+              "position": 10,
+              "icon": "Person",
+              "route": "payment/payments"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "position": 6,
+      "id": "Analytics.MainMenu",
+      "name": "Analytics",
+      "text": "Analytics",
+      "icon": "Dashboard",
+      "entries": [
+        {
+          "type": "group",
+          "id": "Analytics.group.opensearch-reports",
+          "name": "OpenSearch Reports",
+          "text": "Project Dashboards",
+          "position": 1,
+          "entries": [
+            {
+              "position": 1,
+              "route": "individualReports",
+              "text": "Individuals"
+            },
+            {
+              "position": 2,
+              "route": "groupReports",
+              "text": "Groups"
+            },
+            {
+              "position": 3,
+              "route": "beneficiaryReports",
+              "text": "Beneficiaries"
+            },
+            {
+              "position": 5,
+              "route": "grievanceReports",
+              "text": "Grievances"
+            },
+            {
+              "position": 4,
+              "route": "dataUpdatesReports",
+              "text": "Data Updates"
+            },
+            {
+              "position": 6,
+              "route": "dashboardConfiguration"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "Analytics.group.report",
+          "name": "Report",
+          "text": "Reports",
+          "position": 2,
+          "entries": [
+            {
+              "position": 2,
+              "id": "tools.reports",
+              "icon": "TableChart",
+              "text": "Manage Reports"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "position": 7,
+      "id": "Workspace.MainMenu",
+      "name": "Workspace",
+      "text": "Workplace",
+      "icon": "AccountCircle",
+      "entries": [
+        {
+          "type": "group",
+          "id": "Workspace.group.task-management",
+          "name": "Task Management",
+          "text": "Task Management",
+          "position": 1,
+          "entries": [
+            {
+              "position": 2,
+              "icon": "AssignmentTurnedIn",
+              "route": "tasks"
+            },
+            {
+              "position": 1,
+              "icon": "Assignment",
+              "route": "allTasks"
+            },
+            {
+              "position": 11,
+              "icon": "AssignmentInd",
+              "route": "tasks/groups"
+            },
+            {
+              "position": 12,
+              "route": "ticket/tickets"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "Workspace.group.profiles",
+          "name": "Profiles",
+          "text": "Profiles",
+          "position": 4,
+          "entries": [
+            {
+              "position": 4,
+              "icon": "AccountCircle",
+              "route": "profile/myProfile"
+            },
+            {
+              "position": 5,
+              "icon": "Password",
+              "route": "profile/changePassword"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "position": 9,
+      "id": "Administration.MainMenu",
+      "name": "Administration",
+      "text": "Administration",
+      "icon": "LocationCity",
+      "entries": [
+        {
+          "type": "group",
+          "id": "Administration.group.administrative-location",
+          "name": "Administrative Location",
+          "text": "Administrative Location",
+          "position": 4,
+          "entries": [
+            {
+              "position": 4,
+              "route": "location/locations"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "Administration.group.user-management",
+          "name": "User Management",
+          "text": "User Management",
+          "position": 1,
+          "entries": [
+            {
+              "position": 2,
+              "route": "admin/users"
+            },
+            {
+              "position": 1,
+              "route": "roles"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "Administration.group.master-data",
+          "name": "Master Data",
+          "text": "Master Data",
+          "position": 5,
+          "entries": [
+            {
+              "position": 1,
+              "route": "tools/registers"
+            },
+            {
+              "position": 2,
+              "route": "tools/extracts"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

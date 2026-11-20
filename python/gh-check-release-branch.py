@@ -1,11 +1,12 @@
 from config import  RELEASE_NAME
-from utils import get_repos_name,for_repos
+from utils import get_repos_name,for_repos,parse_filter_args
 
 
 def main():
     release_name = RELEASE_NAME
+    repo_filter = parse_filter_args(f'List the repos that have a {release_name} branch.')
     repos_name = get_repos_name()
-    for_repos(repos_name,release_name, '', callback)
+    for_repos(repos_name,release_name, '', callback, repo_filter)
         
         # check if release exists
 

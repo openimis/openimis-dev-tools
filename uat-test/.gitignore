@@ -1,0 +1,11 @@
+node_modules/
+reports/
+cypress/screenshots/
+cypress/downloads/
+cypress/videos/
+cypress/fixtures/tmp_individuals.csv
+cypress/fixtures/_generated/
+serverStarted
+logs/
+dist/
+.cypress-slot.lock

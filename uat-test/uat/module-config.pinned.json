@@ -1,0 +1,36 @@
+{
+  "description": "Baseline module configuration applied before every spec file. Approval (maker-checker) flags are set explicitly to the upstream defaults (on), and the fe-core menu is the one of the release server, so a UAT run does not depend on what was left in the database. A spec that needs another value overrides it in its own before() hook; the next spec file starts again from this baseline. 'configFile' is relative to this file; entries with \"absent\": true are deleted so the module falls back to its code defaults.",
+  "configs": [
+    {
+      "module": "individual",
+      "layer": "be",
+      "config": {
+        "enable_maker_checker_logic_import": true,
+        "enable_maker_checker_for_individual_upload": true,
+        "enable_maker_checker_for_group_upload": true,
+        "enable_maker_checker_for_individual_update": true,
+        "enable_maker_checker_for_group_update": true
+      }
+    },
+    {
+      "module": "social_protection",
+      "layer": "be",
+      "config": {
+        "gql_check_benefit_plan_update": true,
+        "gql_check_beneficiary_crud": true,
+        "gql_check_group_beneficiary_crud": true,
+        "enable_maker_checker_for_beneficiary_upload": true,
+        "enable_maker_checker_for_beneficiary_update": true,
+        "enable_maker_checker_logic_enrollment": true,
+        "enable_maker_checker_for_group_upload": true
+      }
+    },
+    {
+      "module": "fe-core",
+      "layer": "fe",
+      "is_exposed": true,
+      "configFile": "module-config/fe-core.release.json",
+      "source": "https://release.openimis.org/api/graphql moduleConfigurations (fetched 2026-10-19)"
+    }
+  ]
+}

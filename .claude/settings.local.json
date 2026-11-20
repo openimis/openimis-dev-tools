@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xxd requirements.txt)",
+      "Bash(python3 -m pip install -r requirements.txt --dry-run)",
+      "Bash(.venv/bin/python --version)",
+      "Bash(.venv/bin/pip --version)",
+      "Bash(gh pr *)",
+      "Bash(cd *)",
+      "Bash(node show.js 179 180 181 183 718 184 185 186 188 711 712 714 716)",
+      "Bash(cat)",
+      "Bash(chmod +x intro.sh)",
+      "Read(./**)",
+      "Edit(./**)"
+    ]
+  }
+}
