@@ -134,7 +134,7 @@ export function registerProgramCommands() {
           cy.waitForJournalProgress();
 
           // Verify deletion in expanded journal drawer
-          cy.get('.MuiDrawer-paperAnchorRight button')
+          cy.get('.MuiDrawer-paperAnchorRight button, .MuiDrawer-anchorRight .MuiDrawer-paper button')
             .first()
             .click();
 
@@ -144,7 +144,7 @@ export function registerProgramCommands() {
           // .should('contain', `Delete program ${programName}`); //TODO: switch to this after fix
 
           // Close journal drawer
-          cy.get('.MuiDrawer-paperAnchorRight button')
+          cy.get('.MuiDrawer-paperAnchorRight button, .MuiDrawer-anchorRight .MuiDrawer-paper button')
             .first()
             .click();
         });
@@ -413,7 +413,7 @@ export function registerProgramCommands() {
     cy.reload();
 
     // Verify enrollment in expanded journal drawer
-    cy.get('.MuiDrawer-paperAnchorRight button')
+    cy.get('.MuiDrawer-paperAnchorRight button, .MuiDrawer-anchorRight .MuiDrawer-paper button')
       .first()
       .click();
 

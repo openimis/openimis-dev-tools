@@ -309,7 +309,7 @@ export function claimCommands() {
             .find('button[aria-label*="Choose date"]')
             .click();
 
-        cy.get('.MuiPickersDay-root:not(.MuiPickersDay-hidden)')
+        cy.get('.MuiPickersDay-root:not(.MuiPickersDay-hidden), .MuiPickerDay-root:not(.MuiPickerDay-fillerCell)') // MUI X 8 / 9
             .contains('button', String(day))
             .click();
     });

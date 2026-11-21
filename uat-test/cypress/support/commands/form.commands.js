@@ -48,7 +48,7 @@ export function registerFormCommands() {
   // That entry is the first one only while no other spec uses the journal: all specs
   // log in as the same user, so a parallel run lists their mutations too.
   Cypress.Commands.add('assertJournalFirstEntryContains', (text) => {
-    cy.get('.MuiDrawer-paperAnchorRight button').first().click();
+    cy.get('.MuiDrawer-paperAnchorRight button, .MuiDrawer-anchorRight .MuiDrawer-paper button').first().click();
     // the entry is the mutation's: it shows once the server has answered
     cy.journalEntryOfLastMutation(($entry) => expect($entry).to.contain(text));
   });
