@@ -1,4 +1,4 @@
-// UAT: Enrolment / Contracts (OCM-262..270).
+// UAT: Enrolment / Contracts (OCM-262..270, OCM-1230).
 //
 // The baseline has no policy holder, contribution plan or contract. The spec seeds
 // one contribution plan ("CV: percent of income" on products.basic) in a bundle, and
@@ -89,10 +89,10 @@ const seedPolicyHolder = (suffix) => {
 };
 
 // A Draft contract (its details are generated from the policy holder insurees); with
-// `submit` it is submitted, i.e. Negotiable. Yields { code, id, ph }.
-const seedContract = (suffix, { submit = false } = {}) => seedPolicyHolder(suffix).then((ph) => {
+// `submit` it is submitted, i.e. Negotiable. `days` is its length. Yields { code, id, ph }.
+const seedContract = (suffix, { submit = false, days = 364 } = {}) => seedPolicyHolder(suffix).then((ph) => {
   const contract = { code: `C${runId}${suffix}`, ph };
-  mutate('createContract', `code: "${contract.code}" policyHolderId: "${ph.id}" dateValidFrom: "${iso(TODAY)}" dateValidTo: "${iso(addDays(364))}"`);
+  mutate('createContract', `code: "${contract.code}" policyHolderId: "${ph.id}" dateValidFrom: "${iso(TODAY)}" dateValidTo: "${iso(addDays(days))}"`);
   gql(`{ contract(code: "${contract.code}") { edges { node { id } } } }`).then((data) => {
     contract.id = decodeId(data.contract.edges[0].node.id);
     seeded.contracts.push(contract.id);
@@ -361,6 +361,46 @@ describe('UAT Enrolment - Contracts', () => {
       cy.reload();
       expectPageState('Executable');
       expectListState(contract, 'Executable');
+    });
+  });
+
+  // products.basic covers 12 months, so a contract longer than that is split over several
+  // policies of the insured head; approval creates one contribution per policy. The split
+  // used to book the whole amount twice and give the last policy the negative remainder,
+  // and the policies it created had no value (OP-3345). Each length gets its own case.
+  [
+    { suffix: 'J', days: 400, policies: 2 },
+    { suffix: 'K', days: 800, policies: 3 },
+  ].forEach(({ suffix, days, policies }) => {
+    it(`Approves a ${days}-day contract with a positive contribution and a value on each of its policies (OCM-1230)`, () => {
+      seedContract(suffix, { submit: true, days }).then((contract) => {
+        openContract(contract);
+        fab('Approve').click();
+        dialog().should('contain', 'Approve Contract?');
+        confirmDialog();
+        cy.waitForJournalProgress();
+        cy.assertJournalFirstEntryContains(`Approve Contract ${contract.code}`);
+        cy.assertJournalNoFail();
+        contractState(contract).should('eq', STATE.EXECUTABLE);
+        gql(`{
+          contract(code: "${contract.code}") { edges { node { amountRectified } } }
+          contractContributionPlanDetails(contractDetails_Contract_Id: "${contract.id}", isDeleted: false) {
+            edges { node { policy { uuid value } contribution { amount } } } }
+        }`).then((data) => {
+          const expected = Number(data.contract.edges[0].node.amountRectified);
+          const rows = data.contractContributionPlanDetails.edges.map(({ node }) => node);
+          expect(expected, 'contract amount').to.be.greaterThan(0);
+          expect(new Set(rows.map((r) => r.policy?.uuid)).size, 'policies with a contribution').to.be.at.least(policies);
+          rows.forEach((r) => {
+            expect(r.policy.value, `value of policy ${r.policy.uuid}`).to.not.equal(null);
+            expect(Number(r.policy.value), `value of policy ${r.policy.uuid}`).to.be.greaterThan(0);
+            expect(r.contribution, `contribution of policy ${r.policy.uuid}`).to.not.equal(null);
+            expect(Number(r.contribution.amount), `contribution of policy ${r.policy.uuid}`).to.be.greaterThan(0);
+          });
+          const total = rows.reduce((sum, r) => sum + Number(r.contribution?.amount ?? 0), 0);
+          expect(total, 'contributions add up to the contract amount').to.be.closeTo(expected, 0.01);
+        });
+      });
     });
   });
 
