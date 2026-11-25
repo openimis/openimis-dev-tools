@@ -218,6 +218,17 @@ The backend containers (migrations, backend-dev, backend-debug) now use a shared
 
 For information about release management scripts and workflows, see [RELEASE.md](RELEASE.md).
 
+### Upgrading a deployed database from PostgreSQL 13 to 18
+
+From 26.10, `openimis-pgsql` ships PostgreSQL 18, which does not start on a PostgreSQL 13 volume and must be mounted at `/var/lib/postgresql` instead of `/var/lib/postgresql/data`. Once `DB_TAG` in the stack's `.env` points at the new image, run on the server:
+
+```bash
+./pg-upgrade-13-to-18.sh --check /path/to/compose-dir   # dry run, prints the plan
+./pg-upgrade-13-to-18.sh /path/to/compose-dir
+```
+
+It dumps and restores every database, patches the compose mount, re-hashes the app user's password as SCRAM, compares exact row counts and restarts the services that were running. The old volume is kept as `<volume>_pg13` for rollback (OP-3339).
+
 ## Troubleshooting
 
 ### Common Issues
