@@ -52,7 +52,7 @@ Each run writes `reports/<timestamp>/` (and `reports/latest`):
 
 | File | Content |
 |------|---------|
-| `report.html` | one row per UAT case: passed / failed / not automated / out of scope, duration, the Cypress tests behind it, errors |
+| `report.html` | one row per UAT case: passed / failed / not automated / out of scope (and not in solution with `--solution`), duration, the Cypress tests behind it, errors |
 | `junit.xml` | every Cypress test, for CI |
 | `testlink-results.xml` | results to import into TestLink (execution_duration in minutes) |
 | `uat-results.json` | raw data; `npm run uat:report` re-renders the report from it (e.g. after a catalog change) |
@@ -73,6 +73,60 @@ When several people or agents write specs at once, run them through
 `scripts/cypress-slot.sh`: it holds a lock so only one Cypress browser runs at a time
 (each takes 1-2 GB), keeps earlier screenshots, and does not re-pin the module
 configuration (pin it once with `node scripts/module-config.mjs pin`).
+
+## Running against a solution
+
+A solution built by [solution-builder](https://github.com/openimis/solution-builder)
+leaves modules out on purpose (coreMIS has no insuree or claim, SR no social
+protection...). The specs those modules serve cannot pass there, so the suite selects
+what a solution can run:
+
+```bash
+node scripts/run-uat.mjs --solution ../../solutions/coreMIS/uat.json --base-url http://localhost
+node scripts/run-uat.mjs --solution uat.json --spec cypress/e2e/auth.cy.js   # intersected
+node scripts/run-uat.mjs --report-only <run> --solution uat.json             # re-render a run
+```
+
+- **Spec header.** The first line of every spec declares the modules it exercises:
+
+  ```js
+  // @modules be: social_protection, individual  fe: SocialProtectionModule, IndividualModule
+  ```
+
+  Names are the `name` values of the assembly `openimis.json` files (backend logical
+  names, frontend module names). `-` is an empty list; several `@modules` lines in the
+  leading comments add up. A spec lists what it drives itself: the pages it opens (the
+  module owning the `/front/<route>`), the menus, the pickers it fills, the GraphQL types
+  it reads or seeds, the calculation rules it picks, and the baseline records it reads
+  (`B.families` needs `insuree`, `policy`, `product`). `core` and `CoreModule` are never
+  listed: no openIMIS runs without them. Everything else is listed, even when every
+  current solution has it (`location`, `tasks_management`, ...).
+- **Not hiding bugs.** The header names what the spec exercises, never the runtime
+  dependencies of those modules. When a page breaks because a module it does not need
+  is missing (social protection pages rendering `policyHolder.TabPanel`, OP-3349), that
+  is a product bug: do not add the module to the header to make it pass.
+- **uat.json.** solution-builder reads the headers (`node workbench.js --uat-specs DIR`)
+  and writes `build/<solution>/uat.json`: the solution's modules, the specs to run, and
+  the excluded specs with the modules they miss.
+- **The run.** `--solution` runs `uat.json.specs` only (intersected with `--spec`) and
+  gives Cypress the solution's modules as `UAT_MODULES` (backend and frontend names,
+  comma separated). The baseline skips the records of modules the solution lacks (no
+  families without `insuree`, no individuals without `individual`...). The report counts
+  the cases of excluded specs as **not in solution**, with the missing modules, apart
+  from passed / failed / not automated, and lists the excluded specs.
+- **One case needing more.** A test that needs a module its spec header does not list
+  calls `requireModules()` first (`cypress/support/modules.js`); from a `before()` hook
+  it covers the whole `describe`:
+
+  ```js
+  import { requireModules } from '../support/modules';
+  it('Downloads the master data (OCM-703)', () => {
+    requireModules('tools', 'ToolsModule');
+    ...
+  ```
+
+  When the solution lacks one of them, the test is skipped and reported as not in
+  solution. Without `UAT_MODULES` (the full UAT stack) nothing is skipped.
 
 ## Mapping Cypress tests to UAT cases
 

@@ -6,7 +6,7 @@
 // Usage:
 //   node scripts/run-uat.mjs [--spec cypress/e2e/auth.cy.js] [--base-url http://localhost:3000]
 //                            [--browser chrome] [--headed] [--keep-config] [--spec-timeout 45]
-//                            [--parallel 3] [--report-only [dir]]
+//                            [--parallel 3] [--report-only [dir]] [--solution uat.json]
 //
 // Each spec runs in its own process; one still running after --spec-timeout minutes
 // is killed and its tests reported as failed, so a hang cannot stall the whole run.
@@ -19,6 +19,14 @@
 //
 // Module configurations are backed up before the run and restored afterwards; each spec
 // file runs against uat/module-config.pinned.json. --keep-config skips the restore.
+//
+// --solution uat.json runs the specs a solution can support: the uat.json the solution
+// builder writes per solution (modules, specs, excluded specs with the modules they
+// miss). Only its `specs` run (intersected with --spec), Cypress gets the solution's
+// modules as UAT_MODULES (see cypress/support/modules.js), and the report lists the
+// excluded specs, their cases and the tests skipped by requireModules() as "not in
+// solution", apart from passed / failed / not automated. With --report-only it
+// re-renders a previous run against that solution.
 //
 // Outputs reports/<timestamp>/{report.html, uat-results.json, junit.xml, testlink-results.xml}
 // and refreshes reports/latest.
@@ -46,9 +54,10 @@ function parseArgs(argv) {
     else if (a === "--keep-config") args.keepConfig = true;
     else if (a === "--spec-timeout") args.specTimeoutMin = Number(next());
     else if (a === "--parallel") args.parallel = Math.max(1, Number(next()) || 1);
+    else if (a === "--solution") args.solution = next();
     else if (a === "--report-only") args.reportOnly = argv[i + 1] && !argv[i + 1].startsWith("--") ? next() : "latest";
     else if (a === "--help" || a === "-h") {
-      console.log(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").slice(1, 18).join("\n"));
+      console.log(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").slice(1, 29).join("\n"));
       process.exit(0);
     } else throw new Error(`Unknown argument: ${a}`);
   }
@@ -63,19 +72,61 @@ function loadCatalog() {
   return JSON.parse(fs.readFileSync(CATALOG_PATH, "utf8")).cases;
 }
 
+// --- solution (--solution uat.json) ------------------------------------------------
+
+// Appended by requireModules() (cypress/support/modules.js) to a test it skips.
+const NOT_IN_SOLUTION_RE = /\s*\[not in solution: ([^\]]*)\]/;
+
+// Case ids a spec covers, read from its source: OCM-<id> tags and the `ocm:` values of
+// data-driven tests (`ocm: 789`, `ocm: { add: 189, ... }`). Comments are ignored.
+function specCaseIds(spec) {
+  const file = path.join(ROOT, spec);
+  if (!fs.existsSync(file)) return [];
+  const code = fs
+    .readFileSync(file, "utf8")
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("//"))
+    .join("\n");
+  const ids = [...code.matchAll(TAG_RE)].map((m) => m[1]);
+  for (const m of code.matchAll(/\bocm\s*:\s*(\d+|\{[^}]*\})/g)) ids.push(...m[1].match(/\d+/g));
+  return [...new Set(ids)];
+}
+
+// Reads a solution's uat.json; `excluded` gets the case ids of each excluded spec.
+function loadSolution(file) {
+  const uat = JSON.parse(fs.readFileSync(file, "utf8"));
+  if (!Array.isArray(uat.specs) || !uat.modules) throw new Error(`${file} is not a uat.json (no modules or specs)`);
+  const be = uat.modules.be ?? [];
+  const fe = uat.modules.fe ?? [];
+  return {
+    name: uat.solution ?? path.basename(path.dirname(path.resolve(file))),
+    file: path.resolve(file),
+    modules: { be, fe },
+    specs: uat.specs,
+    excluded: (uat.excluded ?? []).map((x) => ({ spec: x.spec, missing: x.missing ?? {}, cases: specCaseIds(x.spec) })),
+    source: uat.source ?? null,
+  };
+}
+
+const missingText = (missing) => [...(missing.be ?? []), ...(missing.fe ?? [])].join(", ");
+
 // Flattens the Cypress module API result into one record per executed test.
 function flattenCypressResults(results) {
   const tests = [];
   for (const run of results.runs ?? []) {
     for (const t of run.tests ?? []) {
-      const fullTitle = t.title.join(" > ");
+      // A test skipped by requireModules() carries the missing modules in its title.
+      const skip = t.title.map((s) => s.match(NOT_IN_SOLUTION_RE)).find(Boolean);
+      const title = skip ? t.title.map((s) => s.replace(NOT_IN_SOLUTION_RE, "")) : t.title;
+      const fullTitle = title.join(" > ");
       const ids = [...new Set([...fullTitle.matchAll(TAG_RE)].map((m) => m[1]))];
       const attempts = t.attempts ?? [];
       tests.push({
         spec: run.spec.relative,
-        title: t.title,
+        title,
         fullTitle,
-        state: t.state, // passed | failed | pending | skipped
+        state: skip ? "not_in_solution" : t.state, // passed | failed | pending | skipped | not_in_solution
+        ...(skip && { missing: skip[1] }),
         durationMs: t.duration ?? attempts.reduce((s, a) => s + (a.duration ?? 0), 0),
         attempts: Math.max(attempts.length, 1),
         error: t.displayError ? t.displayError.split("\n").slice(0, 6).join("\n") : null,
@@ -86,10 +137,14 @@ function flattenCypressResults(results) {
   return tests;
 }
 
-// A UAT case passes only if every Cypress test tagged with it passed.
-function aggregate(catalog, tests) {
+// A UAT case passes only if every Cypress test tagged with it passed. Against a
+// solution, a case only covered by excluded specs, or whose tests requireModules()
+// skipped, is "not in solution" (unless one of its tests failed).
+function aggregate(catalog, tests, solution) {
   const byId = new Map();
   for (const t of tests) for (const id of t.ids) (byId.get(id) ?? byId.set(id, []).get(id)).push(t);
+  const excludedById = new Map();
+  for (const x of solution?.excluded ?? []) for (const id of x.cases) (excludedById.get(id) ?? excludedById.set(id, []).get(id)).push(x);
 
   const known = new Set(catalog.map((c) => c.id));
   const cases = catalog.map((c) => {
@@ -97,13 +152,24 @@ function aggregate(catalog, tests) {
     let result;
     // in_scope is set once the review is validated (scripts/apply-decisions.mjs); until then the verdict decides.
     const inScope = c.in_scope ?? (c.verdict === "KEEP" || c.verdict === "UPDATE");
-    if (!covering.length) result = inScope ? "not_automated" : "out_of_scope";
+    const excluded = excludedById.get(c.id);
+    if (!covering.length) result = excluded ? "not_in_solution" : inScope ? "not_automated" : "out_of_scope";
     else if (covering.some((t) => t.state === "failed")) result = "failed";
+    else if (covering.some((t) => t.state === "not_in_solution")) result = "not_in_solution";
     else if (covering.every((t) => t.state === "passed")) result = "passed";
     else result = "skipped";
+    let missing;
+    if (result === "not_in_solution") {
+      const lists = [
+        ...(covering.length ? [] : excluded.map((x) => missingText(x.missing))),
+        ...covering.filter((t) => t.missing).map((t) => t.missing),
+      ];
+      missing = [...new Set(lists.flatMap((l) => l.split(/,\s*/)).filter(Boolean))].join(", ");
+    }
     return {
       ...c,
       result,
+      ...(missing !== undefined && { missing }),
       durationMs: covering.reduce((s, t) => s + t.durationMs, 0),
       tests: covering.map((t) => ({ spec: t.spec, fullTitle: t.fullTitle, state: t.state, durationMs: t.durationMs, error: t.error })),
     };
@@ -129,6 +195,7 @@ function junitXml(meta, tests) {
         const cls = esc(t.title.slice(0, -1).join(" > ") || spec);
         let body = "";
         if (t.state === "failed") body = `<failure message="${esc(t.error?.split("\n")[0])}">${esc(t.error)}</failure>`;
+        else if (t.state === "not_in_solution") body = `<skipped message="not in solution: ${esc(t.missing)}"/>`;
         else if (t.state !== "passed") body = "<skipped/>";
         return `    <testcase classname="${cls}" name="${name}" time="${secs(t.durationMs)}">${body}</testcase>`;
       })
@@ -159,26 +226,37 @@ function testlinkXml(meta, cases) {
 function htmlReport(meta, agg, tests) {
   const count = (pred) => agg.cases.filter(pred).length;
   const inScope = agg.cases.filter((c) => c.result !== "out_of_scope");
+  const solution = meta.solution;
   const tiles = [
     ["UAT cases", agg.cases.length],
     ["In scope (keep/update)", inScope.length],
     ["Passed", count((c) => c.result === "passed"), "passed"],
     ["Failed", count((c) => c.result === "failed"), "failed"],
     ["Not automated yet", count((c) => c.result === "not_automated"), "pending"],
+    ...(solution ? [["Not in solution", count((c) => c.result === "not_in_solution"), "na"]] : []),
     ["Cypress tests run", tests.length],
     ["Run time", `${secs(meta.durationMs)} s`],
   ];
-  const badge = (r) => `<span class="badge ${esc(r)}">${esc(r.replace("_", " "))}</span>`;
+  const label = (r) => (r === "not_in_solution" ? "not in solution" : r.replace("_", " "));
+  const badge = (r) => `<span class="badge ${esc(r)}">${esc(label(r))}</span>`;
   const bySpec = Object.entries(Object.groupBy(tests, (t) => t.spec));
   const specRows = bySpec
     .map(([spec, ts]) => {
       const n = (st) => ts.filter((t) => t.state === st).length;
-      const other = ts.length - n("passed") - n("failed");
+      const other = ts.length - n("passed") - n("failed") - n("not_in_solution");
       const state = n("failed") ? "failed" : other ? "skipped" : "passed";
-      return `<tr><td><code>${esc(spec)}</code></td><td>${badge(state)}</td><td class="num">${ts.length}</td><td class="num">${n("passed")}</td><td class="num">${n("failed")}</td><td class="num">${other}</td><td class="num">${secs(ts.reduce((a, t) => a + t.durationMs, 0))}</td></tr>`;
+      const notInSolution = solution ? `<td class="num">${n("not_in_solution")}</td>` : "";
+      return `<tr><td><code>${esc(spec)}</code></td><td>${badge(state)}</td><td class="num">${ts.length}</td><td class="num">${n("passed")}</td><td class="num">${n("failed")}</td><td class="num">${other}</td>${notInSolution}<td class="num">${secs(ts.reduce((a, t) => a + t.durationMs, 0))}</td></tr>`;
     })
     .join("");
-  const specTable = `<h2>Cypress specs</h2><div class="scroll"><table><thead><tr><th>Spec</th><th>Status</th><th class="num">Tests</th><th class="num">Passed</th><th class="num">Failed</th><th class="num">Not run</th><th class="num">s</th></tr></thead><tbody>${specRows}</tbody></table></div>`;
+  const notInSolutionHead = solution ? `<th class="num">Not in solution</th>` : "";
+  const specTable = `<h2>Cypress specs</h2><div class="scroll"><table><thead><tr><th>Spec</th><th>Status</th><th class="num">Tests</th><th class="num">Passed</th><th class="num">Failed</th><th class="num">Not run</th>${notInSolutionHead}<th class="num">s</th></tr></thead><tbody>${specRows}</tbody></table></div>`;
+  const excludedTable = solution?.excluded.length
+    ? `<h2>Specs not in this solution</h2><p class="muted">Not run: the solution lacks modules these specs exercise. Their cases count as not in solution.</p>
+       <div class="scroll"><table><thead><tr><th>Spec</th><th>Missing modules</th><th>Cases</th></tr></thead><tbody>${solution.excluded
+         .map((x) => `<tr><td><code>${esc(x.spec)}</code></td><td>${esc(missingText(x.missing))}</td><td class="mono">${x.cases.map((id) => `OCM-${esc(id)}`).join(" ")}</td></tr>`)
+         .join("")}</tbody></table></div>`
+    : "";
   const suites = Object.entries(Object.groupBy(agg.cases, (c) => c.suite));
   const caseRow = (c) => {
     const detail = c.tests
@@ -191,7 +269,7 @@ function htmlReport(meta, agg, tests) {
       .join("");
     return `<tr data-result="${esc(c.result)}" data-verdict="${esc(c.verdict)}">
       <td class="mono">OCM-${esc(c.id)}</td>
-      <td>${esc(c.name)}${detail ? `<ul class="tests">${detail}</ul>` : ""}</td>
+      <td>${esc(c.name)}${c.missing ? ` <span class="muted">(missing: ${esc(c.missing)})</span>` : ""}${detail ? `<ul class="tests">${detail}</ul>` : ""}</td>
       <td>${esc(c.verdict)}${c.duplicate_of ? ` <span class="muted">of OCM-${esc(c.duplicate_of)}</span>` : ""}</td>
       <td>${esc(c.feasibility ?? "")}</td>
       <td>${badge(c.result)}</td>
@@ -201,7 +279,8 @@ function htmlReport(meta, agg, tests) {
     .map(([suite, cs]) => {
       const p = cs.filter((c) => c.result === "passed").length;
       const f = cs.filter((c) => c.result === "failed").length;
-      return `<details class="suite" ${f ? "open" : ""}><summary><b>${esc(suite)}</b> <span class="muted">${cs.length} cases · ${p} passed · ${f} failed</span></summary>
+      const ns = cs.filter((c) => c.result === "not_in_solution").length;
+      return `<details class="suite" ${f ? "open" : ""}><summary><b>${esc(suite)}</b> <span class="muted">${cs.length} cases · ${p} passed · ${f} failed${ns ? ` · ${ns} not in solution` : ""}</span></summary>
       <div class="scroll"><table><thead><tr><th>ID</th><th>Case</th><th>Verdict</th><th>Automation</th><th>Result</th><th class="num">s</th></tr></thead>
       <tbody>${cs.map(caseRow).join("")}</tbody></table></div></details>`;
     })
@@ -232,17 +311,19 @@ main{max-width:1200px;margin:auto}h1{margin:0 0 4px}.muted{color:var(--muted)}.m
 .scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;margin-top:8px}th,td{text-align:left;vertical-align:top;padding:6px;border-top:1px solid var(--line)}
 .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}h2{font-size:16px;margin:20px 0 4px}ul.tests{margin:4px 0 0;padding-left:16px}pre{white-space:pre-wrap;font-size:12px;color:var(--fail);margin:4px 0}
 .badge{display:inline-block;border-radius:4px;padding:0 6px;font-size:12px;border:1px solid currentColor;white-space:nowrap}
-.badge.passed{color:var(--pass)}.badge.failed{color:var(--fail)}.badge.not_automated,.badge.skipped,.badge.pending{color:var(--pend)}.badge.out_of_scope{color:var(--na)}
+.badge.passed{color:var(--pass)}.badge.failed{color:var(--fail)}.badge.not_automated,.badge.skipped,.badge.pending{color:var(--pend)}.badge.out_of_scope{color:var(--na)}${solution ? ".badge.not_in_solution{color:var(--na)}.tile.na b{color:var(--na)}" : ""}
 .warn{color:var(--pend)}
 </style></head><body><main>
 <h1>openIMIS UAT Report</h1>
-<div class="muted">Target <code>${esc(meta.baseUrl)}</code> · started ${esc(meta.startedAt)} · ${esc(meta.browser)} · Cypress ${esc(meta.cypressVersion)}</div>
+<div class="muted">Target <code>${esc(meta.baseUrl)}</code> · started ${esc(meta.startedAt)} · ${esc(meta.browser)} · Cypress ${esc(meta.cypressVersion)}</div>${solution ? `
+<div class="muted">Solution <b>${esc(solution.name)}</b> · ${solution.modules.be.length} backend and ${solution.modules.fe.length} frontend modules · ${solution.specs.length} specs selected, ${solution.excluded.length} not in solution</div>` : ""}
 <div class="tiles">${tiles.map(([l, v, cls]) => `<div class="tile ${cls ?? ""}"><b>${esc(v)}</b>${esc(l)}</div>`).join("")}</div>
 ${unknown}
-${specTable}
+${specTable}${excludedTable ? `
+${excludedTable}` : ""}
 <h2>UAT cases</h2>
-<div class="filters" id="filters">${["passed", "failed", "skipped", "not_automated", "out_of_scope"]
-    .map((r) => `<label><input type="checkbox" value="${r}" ${r === "out_of_scope" ? "" : "checked"}> ${r.replace("_", " ")}</label>`)
+<div class="filters" id="filters">${["passed", "failed", "skipped", "not_automated", ...(solution ? ["not_in_solution"] : []), "out_of_scope"]
+    .map((r) => `<label><input type="checkbox" value="${r}" ${r === "out_of_scope" ? "" : "checked"}> ${label(r)}</label>`)
     .join("")}</div>
 ${suiteBlocks}
 ${untagged}
@@ -255,7 +336,7 @@ document.getElementById('filters').addEventListener('change',apply);apply();
 }
 
 function writeReports(dir, meta, tests) {
-  const agg = aggregate(loadCatalog(), tests);
+  const agg = aggregate(loadCatalog(), tests, meta.solution);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "uat-results.json"), JSON.stringify({ meta, tests, ...agg }, null, 1));
   fs.writeFileSync(path.join(dir, "junit.xml"), junitXml(meta, tests));
@@ -275,16 +356,35 @@ function writeReports(dir, meta, tests) {
     fs.symlinkSync(path.relative(REPORTS_DIR, dir), latest);
   }
   const c = (r) => agg.cases.filter((x) => x.result === r).length;
+  const notInSolution = meta.solution
+    ? `, ${c("not_in_solution")} not in solution ${meta.solution.name} (${meta.solution.excluded.length} specs excluded)`
+    : "";
   console.log(
-    `\nUAT: ${c("passed")} passed, ${c("failed")} failed, ${c("not_automated")} not automated` +
+    `\nUAT: ${c("passed")} passed, ${c("failed")} failed, ${c("not_automated")} not automated${notInSolution}` +
       ` (${tests.length} Cypress tests, ${agg.untagged.length} untagged)\nReport: ${path.join(dir, "report.html")}`,
   );
   // Untagged tests count too: a failing Cypress test must fail the run.
   return tests.filter((t) => t.state === "failed").length;
 }
 
-function listSpecs(specArg) {
-  if (specArg) return specArg.split(",").map((s) => s.trim()).filter(Boolean);
+function listSpecs(specArg, solution) {
+  const asked = specArg ? specArg.split(",").map((s) => s.trim()).filter(Boolean) : null;
+  if (solution) {
+    const norm = (s) => path.normalize(s);
+    const excluded = new Map(solution.excluded.map((x) => [norm(x.spec), x]));
+    for (const s of asked ?? []) {
+      const x = excluded.get(norm(s));
+      if (x) console.warn(`${s} is not in solution ${solution.name} (missing ${missingText(x.missing)}): not run.`);
+      else if (!solution.specs.some((t) => norm(t) === norm(s))) console.warn(`${s} is not listed in ${solution.file}: not run.`);
+    }
+    return solution.specs.filter((s) => {
+      if (asked && !asked.some((a) => norm(a) === norm(s))) return false;
+      if (fs.existsSync(path.join(ROOT, s))) return true;
+      console.warn(`${s} (from ${solution.file}) does not exist here: not run.`);
+      return false;
+    });
+  }
+  if (asked) return asked;
   const dir = path.join(ROOT, "cypress", "e2e");
   return fs
     .readdirSync(dir)
@@ -359,13 +459,25 @@ function runSpec(spec, cypressOptions, workDir, timeoutMs, { quiet = false } = {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  const solution = args.solution ? loadSolution(args.solution) : null;
+  if (solution) {
+    console.log(
+      `Solution ${solution.name}: ${solution.specs.length} spec(s) selected, ${solution.excluded.length} not in the solution` +
+        ` (${solution.modules.be.length} backend, ${solution.modules.fe.length} frontend modules)`,
+    );
+  }
 
   if (args.reportOnly) {
     const dir = path.resolve(REPORTS_DIR, args.reportOnly);
     const prev = JSON.parse(fs.readFileSync(path.join(dir, "uat-results.json"), "utf8"));
-    writeReports(fs.realpathSync(dir), prev.meta, prev.tests);
+    // --solution re-renders the run against that solution's selection.
+    const meta = solution ? { ...prev.meta, solution } : prev.meta;
+    writeReports(fs.realpathSync(dir), meta, prev.tests);
     return;
   }
+  // Backend and frontend names together: they do not collide (snake_case vs PascalCase).
+  const solutionModules = solution ? [...solution.modules.be, ...solution.modules.fe] : null;
+  const hasTasks = !solution || solution.modules.be.includes("tasks_management");
 
   const moduleConfig = await import("./module-config.mjs");
   const startedAt = new Date();
@@ -380,15 +492,17 @@ async function main() {
   // are put back after the run, like the module configurations.
   const { ensureBaseline, backupTaskSources, restoreTaskSources } = await import("./baseline.mjs");
   const taskSourcesBackup = path.join(runDir, "task-sources-before.json");
-  fs.writeFileSync(taskSourcesBackup, JSON.stringify(await backupTaskSources(baseUrl, credentials), null, 1));
+  // A solution without tasks_management has no task groups to save.
+  fs.writeFileSync(taskSourcesBackup, JSON.stringify(hasTasks ? await backupTaskSources(baseUrl, credentials) : [], null, 1));
   // Created here once, so specs running in parallel only read it (each Cypress process
   // still calls ensureBaseline, which then only looks the records up).
-  await ensureBaseline(baseUrl, credentials);
+  await ensureBaseline(baseUrl, credentials, { modules: solution?.modules.be });
 
   // One cypress.run per spec: clear the screenshots once here, not before each spec.
   fs.rmSync(path.join(ROOT, "cypress", "screenshots"), { recursive: true, force: true });
   const config = { video: false, screenshotOnRunFailure: true, trashAssetsBeforeRuns: false, baseUrl };
   const cypressOptions = { project: ROOT, browser: args.browser, headed: args.headed, config };
+  if (solutionModules) cypressOptions.env = { UAT_MODULES: solutionModules.join(",") };
   const results = { runs: [] };
   const byspec = new Map();
   const record = (spec, result) => {
@@ -403,7 +517,7 @@ async function main() {
     results.browserVersion ??= result.browserVersion;
     results.cypressVersion ??= result.cypressVersion;
   };
-  const specs = listSpecs(args.spec);
+  const specs = listSpecs(args.spec, solution);
   try {
     const exclusive = args.parallel > 1 ? specs.filter(isExclusive) : specs;
     const shared = specs.filter((s) => !exclusive.includes(s));
@@ -413,7 +527,7 @@ async function main() {
     if (shared.length) {
       console.log(`\nRunning ${shared.length} spec(s), ${args.parallel} at a time; output in ${path.join(runDir, "logs")}`);
       await moduleConfig.pin(baseUrl, credentials);
-      const options = { ...cypressOptions, env: { PIN_MODULE_CONFIG: false } };
+      const options = { ...cypressOptions, env: { ...cypressOptions.env, PIN_MODULE_CONFIG: false } };
       const queue = [...shared];
       const worker = async () => {
         for (let spec = queue.shift(); spec; spec = queue.shift()) {
@@ -433,8 +547,10 @@ async function main() {
     } else {
       await moduleConfig.restore(baseUrl, credentials, configBackup);
       console.log("Module configurations restored.");
-      await restoreTaskSources(baseUrl, credentials, JSON.parse(fs.readFileSync(taskSourcesBackup, "utf8")));
-      console.log("Task group bindings restored.");
+      if (hasTasks) {
+        await restoreTaskSources(baseUrl, credentials, JSON.parse(fs.readFileSync(taskSourcesBackup, "utf8")));
+        console.log("Task group bindings restored.");
+      }
     }
   }
   const meta = {
@@ -444,6 +560,7 @@ async function main() {
     browser: `${results.browserName ?? args.browser ?? "electron"} ${results.browserVersion ?? ""}`.trim(),
     cypressVersion: results.cypressVersion,
     tester: process.env.UAT_TESTER ?? process.env.USER ?? "automation",
+    ...(solution && { solution }),
   };
   const failed = writeReports(runDir, meta, flattenCypressResults(results));
   process.exit(process.exitCode ?? (failed ? 1 : 0));
