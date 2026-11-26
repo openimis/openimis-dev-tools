@@ -1,3 +1,5 @@
+// @modules be: tools, location, medical  fe: ToolsModule
+import { requireModules } from '../support/modules';
 import { baseline } from '../support/baseline';
 
 // Administration > Registers and Extracts (OCM-231..233, 322..324, 697..702, 704..708).
@@ -138,6 +140,7 @@ describe('Administration / Registers', () => {
   });
 
   it('Downloads insurees as CSV (OCM-697)', () => {
+    requireModules('insuree');
     block('Insurees').contains('button', 'Download').should('be.disabled');
     chooseBlockSelect('Insurees', 'Format', 'CSV');
     block('Insurees').contains('button', 'Download').should('not.be.disabled').click();
@@ -150,6 +153,7 @@ describe('Administration / Registers', () => {
   });
 
   it('Uploads insurees in a dry run (OCM-700)', () => {
+    requireModules('insuree');
     apiFile('/api/im_export/exports/insurees?file_format=csv').then((csv) => {
       dryRunUpload('Insurees', {
         contents: csv, fileName: 'insurees.csv', mimeType: 'text/csv',
@@ -205,6 +209,7 @@ describe('Administration / Extracts', () => {
   });
 
   it('Downloads feedbacks and renewals for an officer (OCM-704)', () => {
+    requireModules('claim', 'policy');
     // Officer r1d1 (district r1d1). An empty extract is still a zip; no demo officer is required.
     // The picker labels an officer with their names only, like users elsewhere in the app
     // (no code): search and pick by name.
@@ -231,6 +236,7 @@ describe('Administration / Extracts', () => {
   });
 
   it('Uploads a claim (OCM-705)', () => {
+    requireModules('claim', 'insuree');
     // Coherent with district r1d2: the baseline hospital, its claim administrator, and
     // the nearHospital family head (village r1d2m1v1). Diagnosis and item are baseline.
     // The hospital already exists, so the upload does not create one.

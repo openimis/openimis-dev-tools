@@ -634,21 +634,36 @@ export async function restoreTaskSources(baseUrl, credentials, saved) {
 
 // --- entry point ----------------------------------------------------------------
 
-export async function ensureBaseline(baseUrl, credentials) {
+// `modules` (optional) lists the backend modules of the solution under test
+// (run-uat.mjs --solution, Cypress env UAT_MODULES). Records of a module the solution
+// lacks are not created and come back empty (null, or {} for keyed records), so the
+// specs that solution runs still get the rest. Without it, everything is created.
+export async function ensureBaseline(baseUrl, credentials, { modules } = {}) {
   const started = Date.now();
+  const installed = modules ? new Set(modules) : null;
+  const has = (...names) => !installed || names.every((name) => installed.has(name));
+  const skipped = [];
+  const step = async (what, needs, empty, run) => {
+    if (has(...needs)) return run();
+    skipped.push(`${what} (${needs.filter((name) => !installed.has(name)).join(", ")})`);
+    return empty;
+  };
   const api = await new Api(baseUrl, "UAT baseline").login(credentials);
   const admin = await connectAdmin(baseUrl, credentials);
-  const locations = await ensureLocations(api);
-  const medical = await ensureMedical(api);
-  const diagnoses = await ensureDiagnoses(api);
-  const healthFacilities = await ensureHealthFacilities(api, locations, medical);
-  const users = await ensureUsers(api, locations, healthFacilities);
-  const products = await ensureProducts(api, medical);
-  const payer = await ensurePayer(api, locations);
-  const families = await ensureFamilies(api, locations, users, products);
-  const activity = await ensureActivity(admin);
-  const individuals = await ensureIndividuals(api, admin, locations);
-  const taskGroups = await ensureTaskGroups(api, credentials);
+  const locations = await step("locations", ["location"], {}, () => ensureLocations(api));
+  const medical = await step("medical items and services", ["medical"], { items: [], services: [] }, () => ensureMedical(api));
+  const diagnoses = await step("diagnoses", ["medical"], [], () => ensureDiagnoses(api));
+  const facilityModules = ["location", "medical", "medical_pricelist"];
+  const healthFacilities = await step("health facilities", facilityModules, {}, () => ensureHealthFacilities(api, locations, medical));
+  const users = await step("users", facilityModules, {}, () => ensureUsers(api, locations, healthFacilities));
+  const products = await step("products", ["product", "medical"], {}, () => ensureProducts(api, medical));
+  const payer = await step("payer", ["payer", "location"], null, () => ensurePayer(api, locations));
+  const families = await step("families", ["insuree", "policy", "contribution", "product"], {}, () =>
+    ensureFamilies(api, locations, users, products));
+  const activity = await step("activity", ["social_protection"], null, () => ensureActivity(admin));
+  const individuals = await step("individuals", ["individual"], null, () => ensureIndividuals(api, admin, locations));
+  const taskGroups = await step("task groups", ["tasks_management"], {}, () => ensureTaskGroups(api, credentials));
+  if (skipped.length) log(`not in the solution, skipped: ${skipped.join("; ")}`);
   log(`ready in ${Math.round((Date.now() - started) / 1000)} s`);
   return {
     locations, items: medical.items, services: medical.services, diagnoses, healthFacilities, users, products, payer,

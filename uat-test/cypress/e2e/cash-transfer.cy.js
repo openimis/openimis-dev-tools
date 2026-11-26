@@ -1,3 +1,4 @@
+// @modules be: social_protection, individual, tasks_management, location  fe: SocialProtectionModule, IndividualModule, TasksManagementModule, LocationModule
 import { getTimestamp } from '../support/utils';
 import { baseline } from '../support/baseline';
 import { TIMEOUTS } from '../support/constants';

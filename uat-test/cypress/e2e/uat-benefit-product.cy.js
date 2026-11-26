@@ -1,3 +1,4 @@
+// @modules be: product, medical, location  fe: ProductModule, LocationModule
 import { baseline } from '../support/baseline';
 
 // UAT: Benefit Plan / Products.

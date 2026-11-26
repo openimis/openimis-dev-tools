@@ -58,12 +58,17 @@ module.exports = defineConfig({
     downloadsFolder: 'cypress/downloads',
     setupNodeEvents(on, config) {
       const readCredentials = () => JSON.parse(fs.readFileSync(path.join(config.fixturesFolder, 'cred.json'), 'utf8'))
+      // Modules of the solution under test (run-uat.mjs --solution): the baseline skips
+      // the records of modules the solution lacks. Unset, every module is assumed.
+      const uatModules = config.env.UAT_MODULES
+        ? String(config.env.UAT_MODULES).split(',').map((name) => name.trim()).filter(Boolean)
+        : undefined
       // The UAT baseline (scripts/baseline.mjs) is fetched or created once per Cypress
       // process: the first spec pays for creating it, the others reuse the answer.
       let baselinePromise
       const baseline = () => {
         baselinePromise ??= import('./scripts/baseline.mjs')
-          .then(({ ensureBaseline }) => ensureBaseline(config.baseUrl, readCredentials()))
+          .then(({ ensureBaseline }) => ensureBaseline(config.baseUrl, readCredentials(), { modules: uatModules }))
           .catch((error) => { baselinePromise = undefined; throw error })
         return baselinePromise
       }

@@ -1,3 +1,4 @@
+// @modules be: policyholder, contribution_plan, insuree, product, location  fe: PolicyHolderModule, ContributionPlanModule, InsureeModule
 // UAT: Enrolment / Policy holders and policy holder users (OCM-248..261).
 //
 // The baseline has no policy holder, contribution plan or bundle. The spec seeds them

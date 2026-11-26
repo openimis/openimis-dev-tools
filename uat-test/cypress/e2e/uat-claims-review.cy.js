@@ -1,3 +1,4 @@
+// @modules be: claim, insuree, policy, contribution, product, medical, medical_pricelist, location  fe: ClaimModule
 import { baseline } from '../support/baseline';
 import { TIMEOUTS } from '../support/constants';
 

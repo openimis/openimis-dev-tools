@@ -1,3 +1,4 @@
+// @modules be: social_protection, individual, tasks_management, payroll, payment_cycle, contribution_plan, calculation, calcrule_social_protection, location  fe: SocialProtectionModule, IndividualModule, PayrollModule, PaymentCycleModule, ContributionPlanModule, TasksManagementModule
 import { CALC_RULES, PAYROLL_STATUS, TIMEOUTS } from '../support/constants';
 import { baseline } from '../support/baseline';
 

@@ -1,3 +1,4 @@
+// @modules be: payroll, location  fe: PayrollModule, LocationModule
 import { getTimestamp } from '../support/utils';
 import { TIMEOUTS } from '../support/constants';
 import { locationPath } from '../support/baseline';

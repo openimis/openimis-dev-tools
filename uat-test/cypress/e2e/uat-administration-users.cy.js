@@ -1,3 +1,5 @@
+// @modules be: location  fe: LocationModule
+import { requireModules } from '../support/modules';
 // Administration > Users (OCM-177, 178, 283, 284, 1153..1157), impersonation (OCM-1229)
 // and password recovery (OCM-1127).
 //
@@ -317,6 +319,7 @@ describe('Administration / Users', () => {
   });
 
   it('Creates an enrolment officer (OCM-283)', () => {
+    requireModules('tools', 'ToolsModule');
     const user = users.officer;
     openNewUser();
     fillLoginDetails(user, { role: 'Enrolment Officer' });

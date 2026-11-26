@@ -1,3 +1,4 @@
+// @modules be: policy, contribution, insuree, product  fe: PolicyModule, ContributionModule, ProductModule
 // UAT: Enrolment / Policies and Contributions searches (OCM-308, OCM-309). Read-only.
 // The policy search filters on products.basic, which the insured family (district r1d1)
 // and the nearHospital family (district r1d2) both hold. The contribution search uses

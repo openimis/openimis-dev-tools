@@ -1,3 +1,4 @@
+// @modules be: individual, social_protection, tasks_management  fe: IndividualModule, SocialProtectionModule
 // UAT "Clients / Individual-": searching the beneficiaries of the program an
 // individual (OCM-1131) or a group (OCM-1148) is enrolled in, reached from the
 // PROGRAMS tab. Programs, individuals, groups and active beneficiaries are seeded

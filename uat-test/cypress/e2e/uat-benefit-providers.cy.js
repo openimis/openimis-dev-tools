@@ -1,3 +1,4 @@
+// @modules be: location, medical_pricelist  fe: LocationModule, MedicalPriceListModule
 import { baseline } from '../support/baseline';
 
 // UAT: Benefit Plan / Providers / Health facilities (OCM-358..361).

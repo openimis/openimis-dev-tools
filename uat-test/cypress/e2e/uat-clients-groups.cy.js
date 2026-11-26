@@ -1,3 +1,4 @@
+// @modules be: individual, tasks_management  fe: IndividualModule, TasksManagementModule
 // UAT "Clients / Individual- / Groups" (and the Group History tab of an individual):
 // list, members, change log, tasks, deletion with maker-checker, export and pagination
 // of /front/groups. Groups and members are seeded through the GraphQL API with

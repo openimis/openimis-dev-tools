@@ -1,3 +1,4 @@
+// @modules be: contract, policyholder, contribution_plan, calcrule_contribution_income_percentage, insuree, policy, product, location  fe: ContractModule, PolicyHolderModule
 // UAT: Enrolment / Contracts (OCM-262..270, OCM-1230).
 //
 // The baseline has no policy holder, contribution plan or contract. The spec seeds

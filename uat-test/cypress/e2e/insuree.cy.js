@@ -1,3 +1,4 @@
+// @modules be: insuree, location  fe: InsureeModule, LocationModule
 import { baseline } from '../support/baseline';
 
 // Insurance numbers are unique: a run that fails before its clean-up leaves its insurees,

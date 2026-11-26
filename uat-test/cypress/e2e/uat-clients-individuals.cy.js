@@ -1,3 +1,5 @@
+// @modules be: individual, tasks_management  fe: IndividualModule, TasksManagementModule
+import { requireModules } from '../support/modules';
 // UAT "Clients / Individual- / Individuals": list, upload, edit with maker-checker,
 // change log, tasks, export, pagination and advanced filters of /front/individuals.
 //
@@ -638,6 +640,7 @@ describe('Clients / Individuals', () => {
   // Partial: no payroll pays these individuals, so the filter by payroll name is not
   // automated; the tab, its summary and its searcher are.
   it('Shows the benefits tab of an individual (OCM-1142)', () => {
+    requireModules('payroll', 'PayrollModule');
     cy.visit(`/front/individuals/individual/${ids.audited}`);
     cy.contains('General Information');
     openTab('Benefits');

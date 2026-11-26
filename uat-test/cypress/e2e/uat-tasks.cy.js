@@ -1,3 +1,4 @@
+// @modules be: tasks_management, social_protection  fe: TasksManagementModule, SocialProtectionModule
 import { TIMEOUTS } from '../support/constants';
 
 // UAT cases of "Workplace- / Task Management- / Tasks". Tasks are produced by program

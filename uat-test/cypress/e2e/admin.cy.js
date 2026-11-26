@@ -1,3 +1,5 @@
+// @modules be: individual, social_protection  fe: IndividualModule, SocialProtectionModule
+import { requireModules } from '../support/modules';
 import { exactText } from '../support/commands/admin.commands';
 import { TIMEOUTS } from '../support/constants';
 const path = require('path');
@@ -15,6 +17,8 @@ describe('Django admin workflows', () => {
   });
 
   it('Configures menu', function () {
+    // The menu fixture shows a main menu only when one of its entries is installed.
+    requireModules('opensearch_reports', 'OpenSearchReportsModule', 'payroll', 'PayrollModule', 'grievance_social_protection', 'GrievanceSocialProtectionModule', 'tasks_management', 'TasksManagementModule');
     cy.deleteModuleConfig("fe-core")
     cy.visit('/front')
     cy.get('div.MuiToolbar-root').should('exist') // default top toolbar menu

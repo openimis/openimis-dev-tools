@@ -1,3 +1,5 @@
+// @modules be: social_protection, individual, tasks_management  fe: SocialProtectionModule, IndividualModule, TasksManagementModule
+import { requireModules } from '../support/modules';
 import { TIMEOUTS } from '../support/constants';
 
 // UAT cases of "Benefit Plan- / Social Program-" (programs, beneficiary uploads) and
@@ -528,6 +530,8 @@ describe('Program edit with approval', () => {
 });
 
 describe('Create payroll from a program', () => {
+  // The payment plan is created on the Payment Plans page; the program opens the payroll form.
+  before(() => requireModules('payroll', 'PayrollModule', 'contribution_plan', 'calcrule_social_protection', 'ContributionPlanModule'));
   const withPlanCode = `PY${runId}`;
   const withPlanName = `UAT Payroll Program ${runId}`;
   const noPlanCode = `PN${runId}`;

@@ -1,3 +1,5 @@
+// @modules be: grievance_social_protection, individual  fe: GrievanceSocialProtectionModule, IndividualModule
+import { requireModules } from '../support/modules';
 import { getTimestamp } from '../support/utils';
 
 describe('Grievance module workflows', () => {
@@ -48,6 +50,8 @@ describe('Grievance module workflows', () => {
       const uniqueId = Date.now().toString().slice(-4);
       const programCode = `GRB${uniqueId}`;
       const programName = `E2E Grievance Beneficiary Program ${uniqueId}`;
+
+      before(() => requireModules('social_protection', 'SocialProtectionModule', 'tasks_management', 'TasksManagementModule'));
 
       before(() => {
         // Disable maker checker
@@ -173,6 +177,8 @@ describe('Grievance module workflows', () => {
       const uniqueId = Date.now().toString().slice(-4);
       const programCode = `GCB${uniqueId}`;
       const programName = `E2E Grievance Comment Beneficiary Program ${uniqueId}`;
+
+      before(() => requireModules('social_protection', 'SocialProtectionModule', 'tasks_management', 'TasksManagementModule'));
 
       before(function () {
         cy.login();

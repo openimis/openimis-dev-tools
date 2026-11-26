@@ -1,3 +1,4 @@
+// @modules be: payer, payment, location  fe: PayerModule, PaymentModule
 // UAT: Accounting / Payers (OCM-312..314) and Payments (OCM-310, 311).
 //
 // Payers and payments are seeded through the GraphQL API with names and receipt
