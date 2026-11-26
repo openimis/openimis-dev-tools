@@ -1,3 +1,4 @@
+// @modules be: opensearch_reports  fe: OpenSearchReportsModule
 import { TIMEOUTS } from '../support/constants';
 
 // UAT cases of "Analytics- / Project Dashboards". The report pages embed OpenSearch
@@ -9,12 +10,12 @@ import { TIMEOUTS } from '../support/constants';
 // imported dashboards and indexed data, which the UAT stack does not provide.
 
 const REPORT_PAGES = [
-  { id: 1195, route: '/front/individualReports', dashboard: 'Individual' },
-  { id: 1196, route: '/front/beneficiaryReports', dashboard: 'Beneficiary' },
-  { id: 1197, route: '/front/groupReports', dashboard: 'Group' },
-  { id: 1198, route: '/front/invoiceReports', dashboard: 'Invoice' },
-  { id: 1199, route: '/front/paymentReports', dashboard: 'Payment' },
-  { id: 1200, route: '/front/grievanceReports', dashboard: 'Grievance' },
+  { ocm: 1195, route: '/front/individualReports', dashboard: 'Individual' },
+  { ocm: 1196, route: '/front/beneficiaryReports', dashboard: 'Beneficiary' },
+  { ocm: 1197, route: '/front/groupReports', dashboard: 'Group' },
+  { ocm: 1198, route: '/front/invoiceReports', dashboard: 'Invoice' },
+  { ocm: 1199, route: '/front/paymentReports', dashboard: 'Payment' },
+  { ocm: 1200, route: '/front/grievanceReports', dashboard: 'Grievance' },
 ];
 
 function gql(query) {
@@ -54,8 +55,8 @@ describe('Project dashboards', () => {
     });
   });
 
-  REPORT_PAGES.forEach(({ id, route, dashboard }) => {
-    it(`Opens the ${dashboard} report page with its dashboard embedded (OCM-${id})`, () => {
+  REPORT_PAGES.forEach(({ ocm, route, dashboard }) => {
+    it(`Opens the ${dashboard} report page with its dashboard embedded (OCM-${ocm})`, () => {
       cy.contains('Welcome Admin Admin!').should('be.visible');
       cy.contains('Analytics').should('be.visible');
       dashboardUrl(dashboard).then((url) => {

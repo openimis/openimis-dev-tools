@@ -1,3 +1,4 @@
+// @modules be: medical  fe: MedicalModule
 // ------------------ TEST DATA ------------------
 // Codes are unique per run (max 6 characters): demo item/service 0002 already exists.
 const runId = Date.now().toString(36).slice(-5).toUpperCase();

@@ -1,3 +1,5 @@
+// @modules be: contribution_plan, calculation, calcrule_social_protection, social_protection  fe: ContributionPlanModule, CalculationModule, SocialProtectionModule
+import { requireModules } from '../support/modules';
 import { getTimestamp } from '../support/utils';
 import { CALC_RULES, TIMEOUTS } from '../support/constants';
 
@@ -312,6 +314,7 @@ describe('Payment plan workflows', () => {
   });
 
   it('creates a payment plan with timesheet calcrule and Base Day Rate', () => {
+    requireModules('calcrule_timesheet');
     const paymentPlan = {
       ...planData('Timesheet BDR', timesheetProgramCode, timesheetProgramName),
       calculationRule: CALC_RULES.TIMESHEET,
@@ -334,6 +337,7 @@ describe('Payment plan workflows', () => {
   });
 
   it('creates a timesheet payment plan without optional Base Day Rate', () => {
+    requireModules('calcrule_timesheet');
     const paymentPlan = {
       ...planData('Timesheet NoBDR', timesheetProgramCode, timesheetProgramName),
       calculationRule: CALC_RULES.TIMESHEET,
@@ -356,6 +360,7 @@ describe('Payment plan workflows', () => {
 
   // --- Updates ---
   it('edits all editable fields on an existing payment plan', () => {
+    requireModules('calcrule_timesheet');
     const paymentPlan = planData('Edit', individualProgramCode, individualProgramName);
     const updatedName = `${paymentPlan.name} Updated`;
     const updatedCalcRule = CALC_RULES.TIMESHEET;

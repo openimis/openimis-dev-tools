@@ -1,3 +1,5 @@
+// @modules be: -  fe: ProfileModule, HomeModule
+import { requireModules } from '../support/modules';
 // UAT "Language Selection in OpenIMIS", "Workplace- / Profile" and "Tools":
 // switching the interface language from the 'My account' dropdown, the profile
 // pages and the master-data extract.
@@ -75,6 +77,7 @@ describe('Language selection', () => {
   });
 
   it('Changes the language from English to French (OCM-1202)', () => {
+    requireModules('LanguageFrModule');
     setAdminLanguage('en');
     cy.login();
     cy.visit('/front/home');
@@ -102,6 +105,7 @@ describe('Language selection', () => {
   });
 
   it('Changes the language from French to English (OCM-1203)', () => {
+    requireModules('LanguageFrModule');
     setAdminLanguage('fr');
     cy.visit('/front/home');
     cy.contains('Bienvenue Admin Admin!');
@@ -208,6 +212,7 @@ describe('Profile', () => {
 
 describe('Tools', () => {
   it('Downloads the master data (OCM-703)', () => {
+    requireModules('tools', 'ToolsModule');
     cy.login();
     cy.visit('/front/tools/extracts', {
       onBeforeLoad(win) {

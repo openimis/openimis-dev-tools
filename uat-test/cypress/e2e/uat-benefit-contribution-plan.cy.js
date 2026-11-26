@@ -1,3 +1,4 @@
+// @modules be: contribution_plan, calculation, calcrule_contribution_income_percentage, product  fe: ContributionPlanModule, CalculationModule, ProductModule
 import { baseline } from '../support/baseline';
 
 // UAT: Benefit Plan / Contribution plans and contribution plan bundles.

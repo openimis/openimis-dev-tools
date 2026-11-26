@@ -1,3 +1,4 @@
+// @modules be: invoice, policy, insuree, product, calcrule_contribution_legacy, location  fe: InvoiceModule, PolicyModule, InsureeModule
 // UAT: Accounting / Customer invoices (OCM-690).
 //
 // A policy saved Idle/Active creates an invoice (calcrule_contribution_legacy) coded

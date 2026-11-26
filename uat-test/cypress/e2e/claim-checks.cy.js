@@ -1,3 +1,4 @@
+// @modules be: claim, insuree, policy, contribution, product, medical, medical_pricelist, location  fe: ClaimModule
 // Claim checks at submission (TestLink "Benefits and Claims / Claim", OCM-53..77, 98):
 // a claim that breaks a product, policy or medical rule is rejected, with the reason
 // on the claim and on the rejected rows.

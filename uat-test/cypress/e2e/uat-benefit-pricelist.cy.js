@@ -1,3 +1,4 @@
+// @modules be: medical_pricelist, medical, location  fe: MedicalPriceListModule, LocationModule
 import { baseline } from '../support/baseline';
 
 // UAT: Benefit Plan / Medical items and services price lists.

@@ -1,3 +1,4 @@
+// @modules be: -  fe: -
 describe('Unauthenticated', () => {
   it('Shows the login screen (OCM-1125, OCM-1126)', () => {
     cy.visit('/front/')

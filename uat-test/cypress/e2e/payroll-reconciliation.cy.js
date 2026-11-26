@@ -1,3 +1,5 @@
+// @modules be: payroll, payment_cycle, contribution_plan, calculation, calcrule_social_protection, social_protection, individual, tasks_management, location  fe: PayrollModule, PaymentCycleModule, ContributionPlanModule, SocialProtectionModule, IndividualModule, TasksManagementModule
+import { requireModules } from '../support/modules';
 import { getTimestamp } from '../support/utils';
 import { CALC_RULES, PAYROLL_STATUS, TIMEOUTS } from '../support/constants';
 import { baseline } from '../support/baseline';
@@ -241,6 +243,8 @@ describe('Payroll reconciliation — cash transfer (social protection calcrule)'
 // ---------------------------------------------------------------------------
 
 describe('Payroll reconciliation — timesheet (base-day-rate calcrule)', () => {
+  // Timesheet payment plans need the calcrule_timesheet module.
+  before(() => requireModules('calcrule_timesheet'));
   const suiteTimestamp = getTimestamp();
   const ts = Date.now();
   const programCode = `RT${ts.toString().slice(-6)}`;

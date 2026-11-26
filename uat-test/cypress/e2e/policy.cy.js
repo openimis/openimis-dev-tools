@@ -1,3 +1,4 @@
+// @modules be: policy, insuree, product, contribution, payer  fe: PolicyModule, InsureeModule, ContributionModule, PayerModule
 import { baseline } from '../support/baseline';
 
 // ------------------ TEST DATA ------------------

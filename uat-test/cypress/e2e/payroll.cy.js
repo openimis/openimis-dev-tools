@@ -1,3 +1,5 @@
+// @modules be: payroll, payment_cycle, contribution_plan, calculation, calcrule_social_protection, social_protection, individual, tasks_management, location  fe: PayrollModule, PaymentCycleModule, ContributionPlanModule, SocialProtectionModule, IndividualModule, TasksManagementModule
+import { requireModules } from '../support/modules';
 import { getTimestamp } from '../support/utils';
 import { TIMEOUTS } from '../support/constants';
 import { baseline } from '../support/baseline';
@@ -273,6 +275,8 @@ describe('Payroll workflows', () => {
 // --- Timesheet Calcrule Payroll Integration ---
 
 describe('Timesheet calcrule payroll', () => {
+  // Timesheet payment plans need the calcrule_timesheet module.
+  before(() => requireModules('calcrule_timesheet'));
   const suiteTimestamp = getTimestamp();
   const getDateOffset = (days) => {
     const date = new Date();

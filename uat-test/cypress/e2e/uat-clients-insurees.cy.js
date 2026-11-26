@@ -1,3 +1,4 @@
+// @modules be: insuree, policy, contribution, product, payer, location  fe: InsureeModule, PolicyModule, ContributionModule, PayerModule
 // UAT "Clients / Insuree-": enrolment of a household (family, member, policy and
 // contribution), enquiry, family and insuree changes, deletions, search and renewal.
 // Families the cases start from are seeded through the GraphQL API; insurance numbers

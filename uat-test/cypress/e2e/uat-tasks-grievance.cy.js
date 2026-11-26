@@ -1,3 +1,4 @@
+// @modules be: grievance_social_protection, tasks_management, social_protection, individual  fe: GrievanceSocialProtectionModule, TasksManagementModule, SocialProtectionModule
 import { TIMEOUTS } from '../support/constants';
 
 // UAT cases of "Workplace- / Task Management- / Grievance", against the pinned

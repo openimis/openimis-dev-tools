@@ -1,3 +1,4 @@
+// @modules be: claim, insuree, policy, product, medical, location  fe: ClaimModule
 import { baseline } from '../support/baseline';
 
 // Claim restoration, complex (package) service and duplication.

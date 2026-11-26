@@ -1,3 +1,4 @@
+// @modules be: medical  fe: MedicalModule
 // UAT: Benefit Plan / Medical items and medical services (create, modify, delete, history).
 // Codes are at most 6 characters and unique per run.
 const runId = Date.now().toString(36).slice(-5).toUpperCase();

@@ -1,3 +1,4 @@
+// @modules be: location  fe: LocationModule
 // Administration > Locations (OCM-342..357).
 //
 // Every case works in a sub-tree under a Region created by this spec, with codes unique

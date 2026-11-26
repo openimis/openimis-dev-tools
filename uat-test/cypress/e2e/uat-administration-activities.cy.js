@@ -1,3 +1,4 @@
+// @modules be: social_protection  fe: SocialProtectionModule
 // CoreMIS / Administration: project activities (OCM-1210..1212).
 //
 // Activities are maintained in Django admin and offered by the "Activity" picker of the

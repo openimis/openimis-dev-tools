@@ -1,3 +1,4 @@
+// @modules be: -  fe: -
 // Administration > Roles Management (OCM-172..175).
 //
 // Works on roles created by this spec, named per run; the tests run in order (create,

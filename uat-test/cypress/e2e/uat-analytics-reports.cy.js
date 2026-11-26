@@ -1,3 +1,5 @@
+// @modules be: report  fe: ToolsModule
+import { requireModules } from '../support/modules';
 import { baseline } from '../support/baseline';
 
 // UAT: Analytics / Reports (OCM-327, 328, 774..789).
@@ -116,31 +118,33 @@ const generateAndCheck = (name) => {
   });
 };
 
-// description in the list, report name, required-parameter filler.
+// description in the list, report name, modules the report needs beyond the spec header
+// (the module registering it in its report.py, and the pickers of its parameters),
+// required-parameter filler.
 // Record parameters are read from the baseline when fill() runs, not at import.
 // The claim-history insuree is the insured family head (village r1d1m1v1), coherent
 // with officer r1d1. The referrals report uses region r1 and its district r1d1.
 // Product reports use the national basic product. Pickers with no value take the
 // first option; the PDF content is not asserted.
 const REPORTS = [
-  { ocm: 789, title: 'Generates the claim history report', description: 'Claim history', name: 'claim_history',
+  { ocm: 789, title: 'Generates the claim history report', description: 'Claim history', name: 'claim_history', modules: ['claim', 'insuree', 'InsureeModule'],
     fill: () => { dateRange('Date From', 'Date To'); pickInsuree('Insuree', baseline().families.insured.head.chfId); } },
-  { ocm: 788, title: 'Generates the claims overview report', description: 'Overview of the processing of claims', name: 'claims_overview',
+  { ocm: 788, title: 'Generates the claims overview report', description: 'Overview of the processing of claims', name: 'claims_overview', modules: ['claim'],
     fill: () => dateRange('Date From', 'Date To') },
-  { ocm: 787, title: 'Generates the claim percentage referrals report', description: 'Percentage of referrals in claims', name: 'claim_percentage_referrals',
+  { ocm: 787, title: 'Generates the claim percentage referrals report', description: 'Percentage of referrals in claims', name: 'claim_percentage_referrals', modules: ['claim'],
     fill: () => {
       const B = baseline();
       choose('Region', B.locations.r1.name);
       choose('District', B.locations.r1d1.name);
       dateRange('Date From', 'Date To');
     } },
-  { ocm: 786, title: 'Generates the claims primary operational indicators report', description: 'Claims Primary operational indicators', name: 'claims_primary_operational_indicators',
+  { ocm: 786, title: 'Generates the claims primary operational indicators report', description: 'Claims Primary operational indicators', name: 'claims_primary_operational_indicators', modules: ['claim'],
     fill: () => { choose('Year', String(TODAY.getFullYear())); choose('Region', baseline().locations.r1.name); } },
-  { ocm: 785, title: 'Generates the insuree family overview report', description: 'Simple claim report', name: 'insuree_family_overview',
+  { ocm: 785, title: 'Generates the insuree family overview report', description: 'Simple claim report', name: 'insuree_family_overview', modules: ['insuree'],
     fill: () => dateRange('From Date', 'To Date') },
-  { ocm: 784, title: 'Generates the premium collection report', description: 'Premium collection', name: 'premium_collection',
+  { ocm: 784, title: 'Generates the premium collection report', description: 'Premium collection', name: 'premium_collection', modules: ['contribution'],
     fill: () => dateRange('Date From', 'Date To') },
-  { ocm: 783, title: 'Generates the insurees pending enrollment report', description: 'Insurees pending enrollment', name: 'insurees_pending_enrollment',
+  { ocm: 783, title: 'Generates the insurees pending enrollment report', description: 'Insurees pending enrollment', name: 'insurees_pending_enrollment', modules: ['insuree'],
     fill: () => {
       // The date and officer labels are untranslated keys (InsureePendingEnrollmentReport.*).
       // Officer r1d1 is the insured family's officer (district r1d1).
@@ -148,31 +152,32 @@ const REPORTS = [
       choose('(?:Officer|InsureePendingEnrollmentReport.officer)', baseline().users.officerR1d1.code);
       pickLocation('Location');
     } },
-  { ocm: 782, title: 'Generates the payment category overview report', description: 'Payment category overview', name: 'payment_category_overview',
+  { ocm: 782, title: 'Generates the payment category overview report', description: 'Payment category overview', name: 'payment_category_overview', modules: ['contribution'],
     fill: () => dateRange('Date From', 'Date To') },
-  { ocm: 781, title: 'Generates the policy renewals report', description: 'Policy renewals', name: 'policy_renewals',
+  { ocm: 781, title: 'Generates the policy renewals report', description: 'Policy renewals', name: 'policy_renewals', modules: ['policy'],
     fill: () => dateRange('Date From', 'Date To') },
-  { ocm: 780, title: 'Generates the insuree missing photo report', description: 'Missing insuree photos', name: 'insuree_missing_photo',
+  { ocm: 780, title: 'Generates the insuree missing photo report', description: 'Missing insuree photos', name: 'insuree_missing_photo', modules: ['insuree'],
     fill: () => {} },
-  { ocm: 779, title: 'Generates the user activity report', description: 'User activity', name: 'user_activity',
+  { ocm: 779, title: 'Generates the user activity report', description: 'User activity', name: 'user_activity', modules: [],
     fill: () => dateRange('From', 'To') },
-  { ocm: 778, title: 'Generates the registers status report', description: 'Registers status', name: 'registers_status',
+  { ocm: 778, title: 'Generates the registers status report', description: 'Registers status', name: 'registers_status', modules: [],
     fill: () => {} },
-  { ocm: 776, title: 'Generates the enrolled families report', description: 'Enrolled families', name: 'enrolled_families',
+  { ocm: 776, title: 'Generates the enrolled families report', description: 'Enrolled families', name: 'enrolled_families', modules: ['insuree'],
     fill: () => { pickLocation('Location'); dateRange('From Date', 'To Date'); } },
-  { ocm: 775, title: 'Generates the contributions distribution report', description: 'Contributions distribution', name: 'contributions_distribution',
+  { ocm: 775, title: 'Generates the contributions distribution report', description: 'Contributions distribution', name: 'contributions_distribution', modules: ['contribution', 'product', 'ProductModule'],
     fill: () => { choose('Product', baseline().products.basic.code); choose('Year', String(TODAY.getFullYear())); } },
-  { ocm: 327, title: 'Generates the product sales report', description: 'Product sales', name: 'product_sales',
+  { ocm: 327, title: 'Generates the product sales report', description: 'Product sales', name: 'product_sales', modules: ['product'],
     fill: () => dateRange('From', 'To') },
-  { ocm: 774, title: 'Generates the product derived operational indicators report', description: 'Product Derived operational indicators', name: 'product_derived_operational_indicators',
+  { ocm: 774, title: 'Generates the product derived operational indicators report', description: 'Product Derived operational indicators', name: 'product_derived_operational_indicators', modules: ['product', 'ProductModule'],
     fill: () => { choose('Product', baseline().products.basic.code); choose('Year', String(TODAY.getFullYear())); } },
 ];
 
 describe('UAT Analytics - Reports', () => {
   beforeEach(() => cy.login());
 
-  REPORTS.forEach(({ ocm, title, description, name, fill }) => {
+  REPORTS.forEach(({ ocm, title, description, name, modules, fill }) => {
     it(`${title} (OCM-${ocm})`, () => {
+      requireModules(...modules);
       openReport(description);
       cy.get(`span:is([aria-label="${name}"],[title="${name}"])`).should('exist');
       fill();
@@ -183,6 +188,7 @@ describe('UAT Analytics - Reports', () => {
   // Partial: only the designer dialog is checked; editing the ReportBro canvas and the
   // modified PDF are manual.
   it('Opens the report designer of a report (OCM-328)', () => {
+    requireModules('product');
     cy.visit('/front/tools/reports');
     cy.contains('tr', 'Product sales').within(() => cy.contains('button', 'Edit').click());
     dialog().should('contain', 'Report Designer');

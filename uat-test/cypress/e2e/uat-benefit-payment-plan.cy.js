@@ -1,3 +1,5 @@
+// @modules be: contribution_plan, calculation  fe: ContributionPlanModule, CalculationModule
+import { requireModules } from '../support/modules';
 import { baseline } from '../support/baseline';
 
 // UAT: Benefit Plan / Payment Plan — creation of payment plans per calculation rule.
@@ -133,6 +135,7 @@ describe('UAT Benefit Plan - Payment Plans', () => {
   });
 
   it('creates a Program payment plan with the social protection rule (OCM-1227)', () => {
+    requireModules('social_protection', 'calcrule_social_protection', 'SocialProtectionModule');
     const plan = { code: planCode('PPCT'), name: `UAT PP Cash Transfer ${runId}` };
     cy.openCreatePaymentPlan();
     cy.chooseMuiSelect('Type', 'Program');
@@ -159,6 +162,7 @@ describe('UAT Benefit Plan - Payment Plans', () => {
   });
 
   it('creates a Product payment plan with the fees rule (OCM-410)', () => {
+    requireModules('product', 'calcrule_fees', 'ProductModule');
     createProductPlan({
       code: planCode('PPFE'),
       name: `UAT PP Fees ${runId}`,
@@ -169,6 +173,7 @@ describe('UAT Benefit Plan - Payment Plans', () => {
   });
 
   it('creates a Product payment plan with the commission rule (OCM-409)', () => {
+    requireModules('product', 'calcrule_commission', 'ProductModule');
     createProductPlan({
       code: planCode('PPCO'),
       name: `UAT PP Commission ${runId}`,
@@ -179,6 +184,7 @@ describe('UAT Benefit Plan - Payment Plans', () => {
   });
 
   it('creates a Product payment plan with the capitation rule (OCM-408)', () => {
+    requireModules('product', 'calcrule_capitation_payment', 'ProductModule');
     createProductPlan({
       code: planCode('PPCA'),
       name: `UAT PP Capitation ${runId}`,
@@ -192,6 +198,7 @@ describe('UAT Benefit Plan - Payment Plans', () => {
   });
 
   it('creates a Product payment plan with the fee-for-service rule (OCM-407)', () => {
+    requireModules('product', 'calcrule_third_party_payment', 'ProductModule');
     const distributions = Object.fromEntries(
       Array.from({ length: 12 }, (_, i) => [`distribution ${i + 1}`, 50]),
     );

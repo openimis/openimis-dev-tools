@@ -1,3 +1,5 @@
+// @modules be: payment_cycle, tasks_management  fe: PaymentCycleModule, TasksManagementModule
+import { requireModules } from '../support/modules';
 import { getTimestamp } from '../support/utils';
 import { TIMEOUTS } from '../support/constants';
 
@@ -129,6 +131,7 @@ describe('Payment cycle workflows', () => {
   });
 
   it('payroll form Payment Cycle picker excludes non-ACTIVE cycles', () => {
+    requireModules('payroll', 'PayrollModule');
     // The PaymentCyclePicker used on the payroll create form queries
     // paymentCycle with `status: ACTIVE`, so a PENDING cycle must never
     // appear in its autocomplete options.

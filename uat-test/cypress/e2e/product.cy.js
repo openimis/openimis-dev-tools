@@ -1,3 +1,4 @@
+// @modules be: product, medical, location  fe: ProductModule, LocationModule
 import { baseline } from "../support/baseline";
 import { TIMEOUTS } from "../support/constants";
 
