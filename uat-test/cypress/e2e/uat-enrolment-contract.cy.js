@@ -137,8 +137,8 @@ const pickDate = (scope, label, date) => {
   });
   step();
   cy.get(header).should('have.text', target);
-  cy.get('.MuiPickerPopper-root .MuiPickersDay-root')
-    .not('.MuiPickersDay-dayOutsideMonth, .MuiPickersDay-hiddenDaySpacingFiller')
+  cy.get('.MuiPickerPopper-root .MuiPickersDay-root, .MuiPickerPopper-root .MuiPickerDay-root') // MUI X 8 / 9
+    .not('.MuiPickersDay-dayOutsideMonth, .MuiPickersDay-hiddenDaySpacingFiller, .MuiPickerDay-dayOutsideMonth, .MuiPickerDay-fillerCell')
     .contains(new RegExp(`^${date.getDate()}$`)).click({ force: true });
   cy.get('.MuiPickerPopper-root').should('not.exist');
 };

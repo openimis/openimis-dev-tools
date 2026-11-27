@@ -356,7 +356,7 @@ const selectRows = (codes) => {
   cy.contains(`Selected ${codes.length} claim(s)`).should('exist');
 };
 
-const journalFirst = () => cy.get('.MuiDrawer-paperAnchorRight li.jrnlItem', { timeout: TIMEOUTS.SERVER_RESULT }).first();
+const journalFirst = () => cy.get('.MuiDrawer-paperAnchorRight li.jrnlItem, .MuiDrawer-anchorRight .MuiDrawer-paper li.jrnlItem', { timeout: TIMEOUTS.SERVER_RESULT }).first();
 
 const expectJournal = (label, { ok = true } = {}) => {
   journalFirst().should('contain', label);

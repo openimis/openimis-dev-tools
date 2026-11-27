@@ -95,7 +95,7 @@ const openClaim = (code) => {
 const save = (code) => {
   cy.clickSave('Save changes');
   cy.waitForJournalProgress();
-  cy.get('.MuiDrawer-paperAnchorRight li.jrnlItem').first().should('contain', code)
+  cy.get('.MuiDrawer-paperAnchorRight li.jrnlItem, .MuiDrawer-anchorRight .MuiDrawer-paper li.jrnlItem').first().should('contain', code)
     .find('.jrnlIcon').should('contain', 'check_circle');
 };
 
